@@ -316,6 +316,13 @@ def test_steering_v2_ring_capture_bound():
     assert honest_v2 + ring_v2 == settlement.GAMMA
 
 
+def test_eligible_steering_readers_metric():
+    snapshot = _ring_capture_snapshot()
+    readers = settlement.eligible_steering_readers(snapshot)
+    # R2/R3/R4 and the finisher endorse the honest FAIL; R1 endorses the ring's.
+    assert readers == {"R1", "R2", "R3", "R4", "F"}
+
+
 def test_steering_v2_relevance_scoping():
     claims = {
         "f1": _claim("f1", "R", docs=["d1"], epoch=1),

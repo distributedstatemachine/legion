@@ -34,16 +34,25 @@ def test_eval_fake_llm_end_to_end(tmp_path):
     assert out.exists()
     on_disk = json.loads(out.read_text(encoding="utf-8"))
     assert on_disk["llm_backend"] == "fake"
-    assert len(report["tasks"]) == 3
+    assert len(report["tasks"]) == 4  # three short fixtures + deep_archive
+    assert {entry["name"] for entry in report["tasks"]} >= {"deep_archive"}
     for entry in report["tasks"]:
         protocol = entry["protocol"]
         assert protocol["settled"] is True
         assert protocol["solved"] is True
         assert protocol["llm_calls"] <= 4 * 30  # within the per-worker budget
+        assert "steering_readers" in protocol  # the Phase 3 concentration metric
         assert entry["baseline"]["solved"] is True
         assert entry["baseline"]["llm_calls"] == 1
         # Somebody earned protocol payouts.
         assert any(delta > 0 for delta in protocol["payoffs"].values())
+
+
+def test_long_document_fixture_is_genuinely_long():
+    fixture = load_fixture(TASKS / "deep_archive.json")
+    assert len(fixture["documents"]) >= 3
+    for name in fixture["documents"]:
+        assert (CORPUS / name).stat().st_size >= 10_000  # long-document regime
 
 
 def test_worker_budget_stops_cleanly(tmp_path):

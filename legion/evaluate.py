@@ -13,7 +13,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable
 
-from legion import crypto
+from legion import crypto, settlement
 from legion.admission import LLMVerifier
 from legion.coordinator import Coordinator
 from legion.store import Store
@@ -114,12 +114,20 @@ def _run_protocol(
         worker.pubkey[:10]: final[worker.pubkey] - initial[worker.pubkey] for worker in workers
     }
     epochs = store.epoch()
+    # Steering-concentration metric: how many distinct readers held v2
+    # steering eligibility. On single-doc decompositions this collapses to the
+    # finisher; fan-out on multi-document tasks is the Phase 3 signal that
+    # search paths crossed.
+    steering_readers = 0
+    if store.task_row(task_id)["answer_claim_id"] is not None:
+        steering_readers = len(settlement.eligible_steering_readers(store.snapshot(task_id)))
     store.close()
     return {
         "solved": bool(solved and settled),
         "settled": settled,
         "epochs": epochs,
         "llm_calls": counting.calls,
+        "steering_readers": steering_readers,
         "payoffs": payoffs,
     }
 
@@ -198,7 +206,7 @@ def run_eval(
 def format_report(report: dict[str, Any]) -> str:
     header = (
         f"{'task':<26} {'solved':<7} {'base':<5} {'epochs':<7} "
-        f"{'calls':<6} {'cost':<9} {'base_cost':<9}"
+        f"{'calls':<6} {'steer_rdrs':<10} {'cost':<9} {'base_cost':<9}"
     )
     lines = [header, "-" * len(header)]
     for entry in report["tasks"]:
@@ -207,7 +215,8 @@ def format_report(report: dict[str, Any]) -> str:
         lines.append(
             f"{entry['name']:<26} {str(protocol['solved']):<7} "
             f"{str(base.get('solved', '-')):<5} {protocol['epochs']:<7} "
-            f"{protocol['llm_calls']:<6} {entry['est_cost_protocol']:<9} "
+            f"{protocol['llm_calls']:<6} {protocol.get('steering_readers', 0):<10} "
+            f"{entry['est_cost_protocol']:<9} "
             f"{entry.get('est_cost_baseline', '-'):<9}"
         )
         for pubkey, delta in sorted(protocol["payoffs"].items()):

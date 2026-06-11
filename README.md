@@ -69,9 +69,11 @@ append-only cite overrides.
   even against a fully compromised model. Adversarial suite in
   `tests/test_verifier_injection.py`.
 - **Real-task eval**: `legion eval --tasks corpus/tasks --workers 4 --baseline`
-  runs LLM workers against bundled multi-document QA fixtures and a single-agent
-  baseline, writing `report.json` (cost/accuracy; uses the real endpoint when
-  `VSCP_LLM=1`, a deterministic gold-fact stub otherwise).
+  runs LLM workers against bundled multi-document QA fixtures (including the
+  ~36 kB `deep_archive` long-document task) and a single-agent baseline, writing
+  `report.json` with cost/accuracy and the `steering_readers` concentration
+  metric (uses the real endpoint when `VSCP_LLM=1`, a deterministic gold-fact
+  stub otherwise).
 
 ## Known limitations / TODO
 

@@ -139,18 +139,11 @@ def _steering_weights_v1(
     }
 
 
-def _steering_weights_v2(
+def _eligibility_v2(
     snapshot: dict[str, Any], derivation_paid: dict[str, int]
-) -> dict[str, int]:
-    """Reader-normalized, relevance-scoped steering weights (settlement v2).
-
-    Each productive reader holds exactly READER_ENDOWMENT endorsement units,
-    split equally over the FAIL/CONSTRAINT claims *eligible* for that reader:
-    fetched by the reader (not its own), at an epoch no later than one of the
-    reader's productive claims whose docs overlap the steered claim's docs.
-    A colluding reader therefore caps the ring's capture at one endowment no
-    matter how many ring claims it fetches.
-    """
+) -> dict[str, list[str]]:
+    """Per productive reader, the ascending-claim_id list of FAIL/CONSTRAINT
+    claims eligible for its endorsement (settlement v2, §2.3)."""
     claims = snapshot["claims"]
     answer_id = snapshot["answer_claim_id"]
     docs = {claim_id: _claim_docs(claim, claims) for claim_id, claim in claims.items()}
@@ -172,7 +165,7 @@ def _steering_weights_v2(
         for claim_id, claim in claims.items()
         if claim["kind"] in {"FAIL", "CONSTRAINT"}
     )
-    weights = {claim_id: 0 for claim_id in steerable}
+    eligibility: dict[str, list[str]] = {}
     for reader in sorted(productive_claims_by_author):
         eligible: list[str] = []
         for claim_id in steerable:
@@ -190,6 +183,42 @@ def _steering_weights_v2(
                 for productive_id in productive_claims_by_author[reader]
             ):
                 eligible.append(claim_id)
+        eligibility[reader] = eligible
+    return eligibility
+
+
+def eligible_steering_readers(snapshot: dict[str, Any]) -> set[str]:
+    """Readers holding a non-empty v2 eligibility set. On single-doc-per-subtask
+    decompositions this tends to collapse to the finisher; on multi-document
+    tasks with overlapping evidence it should fan out - this is the Phase 3
+    metric for whether search paths actually cross."""
+    _, kept = derivation_flows(snapshot)
+    derivation_paid = {claim_id: amount for claim_id, amount in kept.items() if amount > 0}
+    return {
+        reader
+        for reader, eligible in _eligibility_v2(snapshot, derivation_paid).items()
+        if eligible
+    }
+
+
+def _steering_weights_v2(
+    snapshot: dict[str, Any], derivation_paid: dict[str, int]
+) -> dict[str, int]:
+    """Reader-normalized, relevance-scoped steering weights (settlement v2).
+
+    Each productive reader holds exactly READER_ENDOWMENT endorsement units,
+    split equally over the FAIL/CONSTRAINT claims *eligible* for that reader.
+    A colluding reader therefore caps the ring's capture at one endowment no
+    matter how many ring claims it fetches.
+    """
+    claims = snapshot["claims"]
+    steerable = sorted(
+        claim_id
+        for claim_id, claim in claims.items()
+        if claim["kind"] in {"FAIL", "CONSTRAINT"}
+    )
+    weights = {claim_id: 0 for claim_id in steerable}
+    for reader, eligible in _eligibility_v2(snapshot, derivation_paid).items():
         if not eligible:
             continue
         share = READER_ENDOWMENT // len(eligible)

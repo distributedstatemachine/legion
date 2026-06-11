@@ -206,3 +206,7 @@ def inspect(db_root: Path) -> None:
         )
     )
     store.close()
+
+
+if __name__ == "__main__":
+    main()

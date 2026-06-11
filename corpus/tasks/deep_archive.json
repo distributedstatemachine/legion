@@ -1,0 +1,14 @@
+{
+  "name": "deep_archive",
+  "question": "According to the town archives, what major infrastructure changes did the town make, and what prompted each of them?",
+  "documents": [
+    "long/harbor_chronicle.txt",
+    "long/mill_registry.txt",
+    "long/observatory_log.txt"
+  ],
+  "gold_facts": [
+    "The harbormaster's ledger records that the deep-water quay was rebuilt on oak pilings after the great storm season destroyed the original timber framework.",
+    "The grain mill converted from waterwheel to turbine drive in a single winter, doubling its throughput while halving the toll charged to upland farmers.",
+    "The observatory's principal telescope lost three nights of observation each month to lamplight from the new quarter until the council ordered shielded street lanterns."
+  ]
+}
