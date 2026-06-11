@@ -1,0 +1,26 @@
+{
+  "name": "ring_steering_capture",
+  "bounty_µ": 1000000,
+  "claims": [
+    {"id": "hf", "author": "H", "kind": "FAIL", "docs": ["d2", "d3", "d4"], "epoch": 0},
+    {"id": "zf1", "author": "Z", "kind": "FAIL", "docs": ["d1"], "epoch": 0},
+    {"id": "zf2", "author": "Z", "kind": "FAIL", "docs": ["d1"], "epoch": 0},
+    {"id": "zf3", "author": "Z", "kind": "FAIL", "docs": ["d1"], "epoch": 0},
+    {"id": "f1", "author": "R1", "kind": "FACT", "cites": [], "epoch": 1},
+    {"id": "f2", "author": "R2", "kind": "FACT", "cites": [], "epoch": 1},
+    {"id": "f3", "author": "R3", "kind": "FACT", "cites": [], "epoch": 1},
+    {"id": "f4", "author": "R4", "kind": "FACT", "cites": [], "epoch": 1},
+    {"id": "ans", "author": "F", "kind": "ANSWER", "cites": ["f1", "f2", "f3", "f4"], "epoch": 2}
+  ],
+  "fetches": [
+    {"reader": "R2", "object": "hf", "epoch": 0},
+    {"reader": "R3", "object": "hf", "epoch": 0},
+    {"reader": "R4", "object": "hf", "epoch": 0},
+    {"reader": "F", "object": "hf", "epoch": 1},
+    {"reader": "R1", "object": "zf1", "epoch": 0},
+    {"reader": "R1", "object": "zf2", "epoch": 0},
+    {"reader": "R1", "object": "zf3", "epoch": 0}
+  ],
+  "docs": {"f1": ["d1"], "f2": ["d2"], "f3": ["d3"], "f4": ["d4"], "ans": []},
+  "answer": "ans"
+}

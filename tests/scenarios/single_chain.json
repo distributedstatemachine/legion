@@ -1,0 +1,12 @@
+{
+  "name": "single_chain",
+  "bounty_µ": 1000000,
+  "claims": [
+    {"id": "c1", "author": "A", "kind": "FACT", "cites": []},
+    {"id": "c2", "author": "B", "kind": "FACT", "cites": ["c1"]},
+    {"id": "ans", "author": "C", "kind": "ANSWER", "cites": ["c2"]}
+  ],
+  "fetches": [],
+  "docs": {"c1": ["d1"], "c2": ["d2"], "ans": []},
+  "answer": "ans"
+}

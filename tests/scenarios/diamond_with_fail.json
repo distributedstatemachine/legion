@@ -1,0 +1,17 @@
+{
+  "name": "diamond_with_fail",
+  "bounty_µ": 1000000,
+  "claims": [
+    {"id": "c1", "author": "A", "kind": "FACT", "cites": [], "epoch": 0},
+    {"id": "f1", "author": "C", "kind": "FAIL", "docs": ["d1"], "epoch": 0},
+    {"id": "c2", "author": "B", "kind": "FACT", "cites": ["c1"], "epoch": 1},
+    {"id": "c3", "author": "A", "kind": "FACT", "cites": ["c1"], "epoch": 1},
+    {"id": "ans", "author": "D", "kind": "ANSWER", "cites": ["c2", "c3"], "epoch": 2}
+  ],
+  "fetches": [
+    {"reader": "D", "object": "f1", "epoch": 1},
+    {"reader": "A", "object": "f1", "epoch": 0}
+  ],
+  "docs": {"c1": ["d1"], "c2": ["d2"], "c3": ["d1"], "ans": []},
+  "answer": "ans"
+}

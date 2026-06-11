@@ -59,7 +59,7 @@ def test_under_citation_challenge_inserts_edge_and_increases_omitted_payout(tmp_
     store.fetch(finisher.pubkey, cited["claim_id"])
 
     spec = store.task_spec(task_id)
-    body = "\n".join([spec["docs"][0]["fact"], spec["docs"][1]["fact"]])
+    body = "ANSWER: " + "\n".join([spec["docs"][0]["fact"], spec["docs"][1]["fact"]])
     answer = claims.build_claim(
         private_key=finisher.private_key,
         author=finisher.pubkey,
@@ -121,7 +121,7 @@ def test_materiality_challenge_removes_useless_citation(tmp_path):
         author=finisher.pubkey,
         task_id=task_id,
         kind="ANSWER",
-        body="\n".join([spec["docs"][0]["fact"], spec["docs"][1]["fact"]]),
+        body="ANSWER: " + "\n".join([spec["docs"][0]["fact"], spec["docs"][1]["fact"]]),
         evidence=[
             claims.evidence_ref(spec["docs"][0]["doc_hash"], spec["docs"][0]["fact"]),
             claims.evidence_ref(spec["docs"][1]["doc_hash"], spec["docs"][1]["fact"]),
@@ -163,7 +163,7 @@ def test_challenge_resolves_atomically_when_author_cannot_cover_slash(tmp_path):
         author=finisher.pubkey,
         task_id=task_id,
         kind="ANSWER",
-        body="\n".join([spec["docs"][0]["fact"], spec["docs"][1]["fact"]]),
+        body="ANSWER: " + "\n".join([spec["docs"][0]["fact"], spec["docs"][1]["fact"]]),
         evidence=[claims.evidence_ref(spec["docs"][0]["doc_hash"], spec["docs"][0]["fact"])],
         cites=[cited["claim_id"]],
     )
@@ -187,14 +187,35 @@ def test_demo_matches_golden_file(tmp_path):
     output = run_demo(workers=6, honest=4, hoarders=2, K=6, D=3, seed=42, root=tmp_path)
     golden = Path(__file__).with_name("golden_demo_seed42.txt").read_text(encoding="utf-8")
     assert output == golden
+    steering_paid = int(
+        next(line for line in output.splitlines() if line.startswith("steering_paid ")).split()[1]
+    )
+    assert steering_paid > 0  # gamma must flow under settlement v2 as well
+    assert "lease_bonds_burned 0" in output
+
+
+def _quote_from_prompt(prompt: str) -> str:
+    # Pull the first SPAN block's text back out of the structured prompt, the
+    # way an honest model would quote it.
+    marker = "SPAN 0\n"
+    start = prompt.index(marker) + len(marker)
+    end = prompt.index("\n</data>", start)
+    return prompt[start:end][:80]
 
 
 @pytest.mark.skipif(not os.environ.get("VSCP_LLM"), reason="VSCP_LLM unset")
 def test_llm_verifier_smoke_path(tmp_path):
-    yes = LLMVerifier(complete=lambda _prompt: "YES")
-    no = LLMVerifier(complete=lambda _prompt: "NO")
-    assert yes.supports({"body": "supported", "kind": "FACT"}, ["supported"])
-    assert not no.supports({"body": "unsupported", "kind": "FACT"}, ["different"])
+    import json as json_module
+
+    yes = LLMVerifier(
+        complete=lambda prompt: json_module.dumps(
+            {"supported": True, "quote": _quote_from_prompt(prompt)}
+        )
+    )
+    no = LLMVerifier(complete=lambda _prompt: json_module.dumps({"supported": False, "quote": ""}))
+    span = "a sufficiently long span of genuine evidence text for the smoke test"
+    assert yes.supports({"body": "supported claim", "kind": "FACT"}, [span])
+    assert not no.supports({"body": "unsupported", "kind": "FACT"}, ["different long span text here"])
 
     store = Store(tmp_path)
     sponsor = _identity(store, "llm-sponsor", 2_000_000)

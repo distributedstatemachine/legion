@@ -1,0 +1,9 @@
+{
+  "name": "spreading_information",
+  "question": "By what concrete mechanisms is information replicated and transmitted in the printing workshop and in the honeybee colony?",
+  "documents": ["printing.txt", "beekeeping.txt"],
+  "gold_facts": [
+    "The new presses could produce hundreds of identical copies in the time a scribe needed for one, and the price of a book fell sharply as a result.",
+    "Foragers communicate the location of food through a precise waggle dance that encodes both the direction and distance of the source relative to the sun."
+  ]
+}

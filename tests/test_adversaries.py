@@ -60,7 +60,7 @@ def _submit_answer(store, gate, task_id, author, cited_claims, evidence=None):
         author=author.pubkey,
         task_id=task_id,
         kind="ANSWER",
-        body="\n".join(doc["fact"] for doc in spec["docs"]),
+        body="ANSWER: " + "\n".join(doc["fact"] for doc in spec["docs"]),
         evidence=evidence or [],
         cites=[cited["claim_id"] for cited in cited_claims],
     )
@@ -222,9 +222,28 @@ def test_citation_ring_gains_nothing_and_loses_the_slash(tmp_path):
     assert _derivation_paid(post, z_fail["claim_id"]) == 0
     assert _derivation_paid(post, y_fact["claim_id"]) == 112_500
     assert _derivation_paid(post, x_fact["claim_id"]) == 112_500
-    # TODO: the steering pool is still gameable by a ring (Y fetching Z's FAIL
-    # makes Z a paid steerer once Y is productive). Needs a usefulness rule
-    # stronger than raw readership before this PoC graduates.
+
+    # Steering v2 closes the collusion hole: Y's fetch of Z's FAIL no longer
+    # mints steering weight, because Z's FAIL (doc0) never informed anything Y
+    # productively authored (doc1). Under v1 the same fetch handed Z all of
+    # GAMMA - that asymmetry is the bug v2 fixes.
+    def _steering_to_ring(transfers):
+        return sum(
+            t.amount_mu
+            for t in transfers
+            if t.reason == "PAYOUT_STEERING" and t.to_pubkey in {y.pubkey, z.pubkey}
+        )
+
+    snapshot = store.snapshot(task_id)
+    ring_v1 = _steering_to_ring(settlement.settle(snapshot, version=1))
+    ring_v2 = _steering_to_ring(settlement.settle(snapshot, version=2))
+    assert ring_v1 == settlement.GAMMA  # the v1 hole, pinned
+    assert ring_v2 == 0
+    assert ring_v2 < ring_v1
+    assert any(
+        t.reason == "BURN" and t.amount_mu == settlement.GAMMA
+        for t in settlement.settle(snapshot, version=2)
+    )
 
 
 def test_duplicate_claim_earns_nothing_under_flat_flow(tmp_path):

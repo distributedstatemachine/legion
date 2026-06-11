@@ -52,17 +52,39 @@ metered through a fetch log, citations of unfetched claims are rejected, and
 under-citation/materiality challenges rewrite the settlement graph through
 append-only cite overrides.
 
+## Phase 2
+
+- **Steering v2** (`settle(..., version=2)`, the default): steering weight is no
+  longer raw readership. Each productive reader holds a normalized 1,000,000-unit
+  endorsement budget, split across the FAIL/CONSTRAINT claims that verifiably
+  *informed* its work (fetched before a positively-flowing claim whose docs
+  overlap the FAIL's docs). A colluding reader caps its ring's capture at one
+  endowment no matter how many ring FAILs it fetches; `version=1` preserves the
+  old behavior and old goldens.
+- **Settlement-equivalence harness**: `tools/sim/sim.py` (independent float
+  reference) and `legion.settlement` must agree to the µ on every scenario in
+  `tests/scenarios/` — two implementations of the mechanism auditing each other.
+- **Hardened LLM verifier**: nonce-fenced data blocks, strict JSON output, and a
+  deterministic quote check (verbatim span substring, 10–300 chars) that holds
+  even against a fully compromised model. Adversarial suite in
+  `tests/test_verifier_injection.py`.
+- **Real-task eval**: `legion eval --tasks corpus/tasks --workers 4 --baseline`
+  runs LLM workers against bundled multi-document QA fixtures and a single-agent
+  baseline, writing `report.json` (cost/accuracy; uses the real endpoint when
+  `VSCP_LLM=1`, a deterministic gold-fact stub otherwise).
+
 ## Known limitations / TODO
 
-- **Steering collusion**: γ weight is raw readership among productive authors,
-  so a ring member fetching a partner's FAIL still counts; needs a usefulness
-  rule stronger than readership (see TODO in `tests/test_adversaries.py`).
-- **LLM verifier is prompt-injectable**: claim bodies flow into the prompt
-  unquoted. Before any real LLM task: run the deterministic ref-tag check
-  first, structurally quote the body, and build an adversarial suite for the
-  verifier itself.
+- **Steering collusion** (fixed in Phase 2): settlement v2's reader-normalized,
+  relevance-scoped weights bound a ring's steering capture; v1's raw-readership
+  rule remains available behind `version=1` for comparison.
+- **LLM verifier injection** (hardened in Phase 2): deterministic checks run
+  first, untrusted content is structurally fenced, and affirmative verdicts
+  require a verbatim span quote. The residual risk is a model that quotes real
+  span text while reasoning wrongly — that is a model-quality issue, not an
+  injection channel.
 - **Single process by design**: all "nodes" share one SQLite DB via the
   coordinator. Distribution is deliberately deferred until the verifier
-  economics are validated on real multi-document QA tasks.
+  economics are validated on real multi-document QA tasks (Phase 3).
 - The first-publisher novelty discount (`--priority-weight`) from the spec's
   stretch goal is not implemented.

@@ -1,0 +1,18 @@
+{
+  "name": "fail_steering_3readers",
+  "bounty_µ": 1000000,
+  "claims": [
+    {"id": "f1", "author": "X", "kind": "FAIL", "docs": ["d1", "d2", "d3"], "epoch": 0},
+    {"id": "c1", "author": "A", "kind": "FACT", "cites": [], "epoch": 1},
+    {"id": "c2", "author": "B", "kind": "FACT", "cites": [], "epoch": 1},
+    {"id": "c3", "author": "C", "kind": "FACT", "cites": [], "epoch": 1},
+    {"id": "ans", "author": "D", "kind": "ANSWER", "cites": ["c1", "c2", "c3"], "epoch": 2}
+  ],
+  "fetches": [
+    {"reader": "A", "object": "f1", "epoch": 0},
+    {"reader": "B", "object": "f1", "epoch": 0},
+    {"reader": "C", "object": "f1", "epoch": 0}
+  ],
+  "docs": {"c1": ["d1"], "c2": ["d2"], "c3": ["d3"], "ans": []},
+  "answer": "ans"
+}

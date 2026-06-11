@@ -1,0 +1,13 @@
+{
+  "name": "ring_padding",
+  "bounty_µ": 1000000,
+  "claims": [
+    {"id": "p0", "author": "root0", "kind": "FACT", "cites": []},
+    {"id": "p1", "author": "root1", "kind": "FACT", "cites": []},
+    {"id": "n", "author": "node", "kind": "FACT", "cites": ["p0", "p1"]},
+    {"id": "ans", "author": "finisher", "kind": "ANSWER", "cites": ["n"]}
+  ],
+  "fetches": [],
+  "docs": {"p0": ["d0"], "p1": ["d1"], "n": ["d0"], "ans": []},
+  "answer": "ans"
+}

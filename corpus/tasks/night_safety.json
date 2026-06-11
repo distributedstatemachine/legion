@@ -1,0 +1,9 @@
+{
+  "name": "night_safety",
+  "question": "How do the cranes and the lighthouse keeper each cope with the dangers of the night?",
+  "documents": ["cranes.txt", "lighthouse.txt"],
+  "gold_facts": [
+    "At dusk the birds gather in shallow water where predators cannot approach unseen, and their calls carry for several kilometres across the flat country.",
+    "The light itself was driven by a clockwork mechanism that the keeper had to rewind every few hours, a duty that broke his sleep into short and exhausting fragments."
+  ]
+}

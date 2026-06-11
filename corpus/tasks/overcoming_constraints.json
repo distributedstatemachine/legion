@@ -1,0 +1,9 @@
+{
+  "name": "overcoming_constraints",
+  "question": "How do the mountain railway and the coral reef each overcome a hard physical constraint of their environment?",
+  "documents": ["railway.txt", "reef.txt"],
+  "gold_facts": [
+    "Each spiral allows the train to cross over its own path at a higher level, trading horizontal distance for a gentle and manageable gradient.",
+    "The living coral depends on microscopic algae that live within its tissues, trading shelter for the sugars the algae produce through photosynthesis."
+  ]
+}

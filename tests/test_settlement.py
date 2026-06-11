@@ -10,14 +10,37 @@ from hypothesis import strategies as st
 from legion import settlement
 
 
-def _snapshot(claims, answer_id="answer", fetches=None):
-    return {
+def _snapshot(claims, answer_id="answer", fetches=None, version=None):
+    snapshot = {
         "task_id": "task",
         "bounty_µ": 1_000_000,
         "answer_claim_id": answer_id,
         "claims": claims,
         "fetches": fetches or [],
     }
+    if version is not None:
+        snapshot["settlement_version"] = version
+    return snapshot
+
+
+def _claim(claim_id, author, kind="FACT", cites=(), docs=(), epoch=0):
+    return {
+        "claim_id": claim_id,
+        "task_id": "task",
+        "author": author,
+        "kind": kind,
+        "body": f"body {claim_id}",
+        "evidence": [{"doc_hash": doc, "ref": {}} for doc in docs],
+        "cites": list(cites),
+        "epoch_submitted": epoch,
+        "status": "ADMITTED",
+    }
+
+
+def _steering_to(transfers, author):
+    return sum(
+        t.amount_mu for t in transfers if t.reason == "PAYOUT_STEERING" and t.to_pubkey == author
+    )
 
 
 @st.composite
@@ -68,19 +91,21 @@ def snapshot_strategy(draw):
 @given(snapshot_strategy())
 @settings(max_examples=50, deadline=None)
 def test_conservation_property(snapshot):
-    transfers = settlement.settle(snapshot)
-    bounty_total = sum(
-        transfer.amount_mu
-        for transfer in transfers
-        if transfer.reason in {"PAYOUT_FINISHER", "PAYOUT_DERIVATION", "PAYOUT_STEERING", "BURN"}
-    )
-    assert bounty_total == 1_000_000
-    assert all(transfer.amount_mu >= 0 for transfer in transfers)
+    for version in (1, 2):
+        transfers = settlement.settle(snapshot, version=version)
+        bounty_total = sum(
+            transfer.amount_mu
+            for transfer in transfers
+            if transfer.reason in {"PAYOUT_FINISHER", "PAYOUT_DERIVATION", "PAYOUT_STEERING", "BURN"}
+        )
+        assert bounty_total == 1_000_000
+        assert all(transfer.amount_mu >= 0 for transfer in transfers)
 
 
-@given(snapshot_strategy())
+@given(snapshot_strategy(), st.sampled_from([1, 2]))
 @settings(max_examples=12, deadline=None)
-def test_determinism_property_across_runs_and_processes(snapshot):
+def test_determinism_property_across_runs_and_processes(snapshot, version):
+    snapshot = dict(snapshot, settlement_version=version)
     local = [
         json.dumps([transfer.to_dict() for transfer in settlement.settle(snapshot)], sort_keys=True)
         for _ in range(3)
@@ -239,6 +264,91 @@ def test_golden_seven_claim_derivation_vector():
         "c5": 37_500,
         "c6": 18_750,
     }
-    transfers = settlement.settle(_snapshot(claims))
-    refunds = [transfer for transfer in transfers if transfer.reason == "FEE_REFUND"]
+    # This golden vector pins v1 semantics; the derivation pool is identical in
+    # v2, so the v2 default must byte-match it as well.
+    transfers_v1 = settlement.settle(_snapshot(claims), version=1)
+    transfers_v2 = settlement.settle(_snapshot(claims))
+    assert [t.to_dict() for t in transfers_v1] == [t.to_dict() for t in transfers_v2]
+    refunds = [transfer for transfer in transfers_v1 if transfer.reason == "FEE_REFUND"]
     assert len(refunds) == 7
+
+
+def _ring_capture_snapshot():
+    """Four honest productive readers + one ring reader that fetched 3 ring FAILs."""
+    claims = {}
+    for i in range(1, 5):  # facts f1..f4 by R1..R4, doc d1..d4, epoch 1
+        claims[f"f{i}"] = _claim(f"f{i}", f"R{i}", docs=[f"d{i}"], epoch=1)
+    claims["hf"] = _claim("hf", "H", kind="FAIL", docs=["d2", "d3", "d4"], epoch=0)
+    for j in range(1, 4):  # ring FAILs by Z, all on d1 (overlapping R1's work)
+        claims[f"zf{j}"] = _claim(f"zf{j}", "Z", kind="FAIL", docs=["d1"], epoch=0)
+    claims["answer"] = _claim(
+        "answer", "F", kind="ANSWER", cites=["f1", "f2", "f3", "f4"], epoch=2
+    )
+    fetches = [
+        {"reader": "R2", "object_id": "hf", "epoch": 0},
+        {"reader": "R3", "object_id": "hf", "epoch": 0},
+        {"reader": "R4", "object_id": "hf", "epoch": 0},
+        {"reader": "F", "object_id": "hf", "epoch": 1},
+        # R1 is the ring's productive member: it fetches every ring FAIL.
+        {"reader": "R1", "object_id": "zf1", "epoch": 0},
+        {"reader": "R1", "object_id": "zf2", "epoch": 0},
+        {"reader": "R1", "object_id": "zf3", "epoch": 0},
+    ]
+    return _snapshot(claims, fetches=fetches)
+
+
+def test_steering_v2_ring_capture_bound():
+    snapshot = _ring_capture_snapshot()
+    n_claims = len(snapshot["claims"])
+    n_productive_readers = 5  # R1..R4 + finisher F
+
+    ring_v1 = _steering_to(settlement.settle(snapshot, version=1), "Z")
+    ring_v2 = _steering_to(settlement.settle(snapshot, version=2), "Z")
+
+    # v1: each fetched ring FAIL adds a full weight unit -> 3/(3+4) of GAMMA.
+    assert ring_v1 == settlement.GAMMA * 3 // 7
+    # v2: the ring reader's endowment is normalized; capture is bounded by
+    # GAMMA / (#productive readers) regardless of how many ring FAILs exist.
+    assert ring_v2 <= settlement.GAMMA // n_productive_readers + n_claims
+    assert ring_v2 < ring_v1
+    # The honest FAIL takes the rest.
+    honest_v2 = _steering_to(settlement.settle(snapshot, version=2), "H")
+    assert honest_v2 + ring_v2 == settlement.GAMMA
+
+
+def test_steering_v2_relevance_scoping():
+    claims = {
+        "f1": _claim("f1", "R", docs=["d1"], epoch=1),
+        # Disjoint docs: R fetched it, but it informed nothing R authored.
+        "fail_disjoint": _claim("fail_disjoint", "H", kind="FAIL", docs=["dX"], epoch=0),
+        # Right doc, but fetched after R's last productive claim.
+        "fail_late": _claim("fail_late", "H", kind="FAIL", docs=["d1"], epoch=4),
+        "answer": _claim("answer", "F", kind="ANSWER", cites=["f1"], epoch=2),
+    }
+    fetches = [
+        {"reader": "R", "object_id": "fail_disjoint", "epoch": 0},
+        {"reader": "R", "object_id": "fail_late", "epoch": 5},
+    ]
+    snapshot = _snapshot(claims, fetches=fetches)
+
+    transfers_v2 = settlement.settle(snapshot, version=2)
+    assert _steering_to(transfers_v2, "H") == 0
+    assert any(t.reason == "BURN" and t.amount_mu == settlement.GAMMA for t in transfers_v2)
+    # v1 on the same snapshot pays the readership rubber stamp - that is the bug.
+    assert _steering_to(settlement.settle(snapshot, version=1), "H") == settlement.GAMMA
+
+
+def test_steering_v1_raw_count_backward_compat():
+    claims = {
+        "f1": _claim("f1", "A", docs=["d1"], epoch=0),
+        "fail": _claim("fail", "H", kind="FAIL", docs=["d1"], epoch=0),
+        "answer": _claim("answer", "F", kind="ANSWER", cites=["f1"], epoch=1),
+    }
+    fetches = [{"reader": "A", "object_id": "fail", "epoch": 0}]
+    transfers = settlement.settle(_snapshot(claims, fetches=fetches), version=1)
+    assert _steering_to(transfers, "H") == settlement.GAMMA
+    # The snapshot's own settlement_version key is honored when no explicit arg.
+    pinned = _snapshot(claims, fetches=fetches, version=1)
+    assert [t.to_dict() for t in settlement.settle(pinned)] == [
+        t.to_dict() for t in transfers
+    ]

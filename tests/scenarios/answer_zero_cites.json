@@ -1,0 +1,11 @@
+{
+  "name": "answer_zero_cites",
+  "bounty_µ": 1000000,
+  "claims": [
+    {"id": "c1", "author": "A", "kind": "FACT", "cites": []},
+    {"id": "ans", "author": "D", "kind": "ANSWER", "cites": []}
+  ],
+  "fetches": [],
+  "docs": {"c1": ["d1"], "ans": ["d1"]},
+  "answer": "ans"
+}

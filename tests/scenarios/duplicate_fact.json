@@ -1,0 +1,12 @@
+{
+  "name": "duplicate_fact",
+  "bounty_µ": 1000000,
+  "claims": [
+    {"id": "c1", "author": "A", "kind": "FACT", "cites": []},
+    {"id": "c1dup", "author": "B", "kind": "FACT", "cites": []},
+    {"id": "ans", "author": "D", "kind": "ANSWER", "cites": ["c1"]}
+  ],
+  "fetches": [],
+  "docs": {"c1": ["d1"], "c1dup": ["d1"], "ans": []},
+  "answer": "ans"
+}

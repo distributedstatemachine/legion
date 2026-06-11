@@ -75,6 +75,7 @@ class Store:
               closed_epoch INTEGER,
               settlement_epoch INTEGER,
               settlement_applied INTEGER NOT NULL DEFAULT 0,
+              settlement_version INTEGER,
               answer_claim_id TEXT,
               spec_json TEXT NOT NULL,
               answer_key_json TEXT
@@ -516,17 +517,41 @@ class Store:
     def reject_claim(self, claim_id: str, reason: str) -> None:
         self.set_claim_status(claim_id, "REJECTED", reason)
 
-    def close_task_for_answer(self, task_id: str, answer_claim_id: str, challenge_window: int) -> None:
+    def close_task_for_answer(
+        self,
+        task_id: str,
+        answer_claim_id: str,
+        challenge_window: int,
+        settlement_version: int = 2,
+    ) -> None:
         row = self.task_row(task_id)
         if row["status"] != "OPEN":
             return
         epoch = self.epoch()
-        self.conn.execute(
-            "UPDATE tasks SET status = 'CLOSED', closed_epoch = ?, settlement_epoch = ?, "
-            "answer_claim_id = ? WHERE task_id = ?",
-            (epoch, epoch + challenge_window, answer_claim_id, task_id),
-        )
-        self.conn.commit()
+        with self.conn:
+            self.conn.execute(
+                "UPDATE tasks SET status = 'CLOSED', closed_epoch = ?, settlement_epoch = ?, "
+                "settlement_version = ?, answer_claim_id = ? WHERE task_id = ?",
+                (epoch, epoch + challenge_window, settlement_version, answer_claim_id, task_id),
+            )
+            # Refund every live lease bond on this task: the close freezes the
+            # ledger, so a holder mid-work (e.g. an honest answer-lease holder
+            # beaten by a racing unleased answer) must not have its bond
+            # stranded and later burned by expiry.
+            leased = self.conn.execute(
+                "SELECT subtask_id, lease_holder FROM subtasks "
+                "WHERE task_id = ? AND status = 'LEASED'",
+                (task_id,),
+            ).fetchall()
+            for sub in leased:
+                self._apply_transfer(
+                    epoch, f"BOND:{sub['subtask_id']}", sub["lease_holder"], LEASE_BOND, "BOND"
+                )
+                self.conn.execute(
+                    "UPDATE subtasks SET status = 'PENDING', lease_holder = NULL, "
+                    "lease_expiry_epoch = NULL WHERE subtask_id = ?",
+                    (sub["subtask_id"],),
+                )
 
     def mark_settlement_applied(self, task_id: str) -> None:
         self.conn.execute(
@@ -617,6 +642,7 @@ class Store:
             "task_id": task_id,
             "bounty_µ": int(task["bounty_µ"]),
             "answer_claim_id": task["answer_claim_id"],
+            "settlement_version": task["settlement_version"] or 2,
             "claims": claims,
             "fetches": self.fetch_rows(),
         }

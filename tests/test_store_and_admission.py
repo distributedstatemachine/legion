@@ -183,6 +183,61 @@ def test_fetch_serves_admitted_claims_only(tmp_path):
         store.fetch(reader.pubkey, rejected["claim_id"])
 
 
+def test_lease_bond_refunded_when_task_closes_under_holder(tmp_path):
+    # An honest worker holding the answer lease when a racing (unleased) answer
+    # closes the task must get its bond back in the same transaction.
+    store = Store(tmp_path)
+    task_id = _task(store, tmp_seed=23, K=1)
+    answer_key = store.answer_key(task_id)
+    gate = AdmissionGate(store, MockVerifier(answer_key))
+    honest = _identity(store, "lease-honest", 200_000)
+    hoarder = _identity(store, "lease-hoarder", 200_000)
+
+    fact = _fact_claim(store, task_id, honest, 0)
+    fact["subtask_id"] = None  # plain FACT; the subtask DAG is exercised below
+    fact = claims.build_claim(
+        private_key=honest.private_key,
+        author=honest.pubkey,
+        task_id=task_id,
+        kind="FACT",
+        body=fact["body"],
+        evidence=fact["evidence"],
+    )
+    store.submit_claim(fact)
+    gate.process_pending()
+    assert store.claim(fact["claim_id"])["status"] == "ADMITTED"
+
+    # Mark the fact subtask DONE so the answer subtask becomes leasable.
+    store.conn.execute(
+        "UPDATE subtasks SET status = 'DONE' WHERE subtask_id = ?", (f"{task_id}:fact:0",)
+    )
+    store.conn.commit()
+    lease = tasks.lease_available_subtask(store, task_id, honest.pubkey)
+    assert lease["subtask_id"] == f"{task_id}:answer"
+    balance_after_lease = store.balance(honest.pubkey)
+
+    store.fetch(hoarder.pubkey, fact["claim_id"])
+    racing = claims.build_claim(
+        private_key=hoarder.private_key,
+        author=hoarder.pubkey,
+        task_id=task_id,
+        kind="ANSWER",
+        body="ANSWER: all 1 facts established via cited FACT claims",
+        cites=[fact["claim_id"]],
+    )
+    store.submit_claim(racing)
+    gate.process_pending()
+    assert store.task_row(task_id)["status"] == "CLOSED"
+
+    # Bond came back and the lease was cleared.
+    assert store.balance(honest.pubkey) == balance_after_lease + 5_000
+    sub = store.subtask(f"{task_id}:answer")
+    assert sub["status"] == "PENDING" and sub["lease_holder"] is None
+    # Total BOND inflow == outflow for the run; no bond stranded.
+    bonds = store.pseudo_balances()
+    assert all(balance == 0 for account, balance in bonds.items() if account.startswith("BOND:"))
+
+
 def test_pseudo_account_ledger_and_global_conservation(tmp_path):
     run_demo(workers=6, honest=4, hoarders=2, K=6, D=3, seed=42, root=tmp_path)
     store = Store(tmp_path)

@@ -1,0 +1,14 @@
+{
+  "name": "fail_steering_1reader",
+  "bounty_µ": 1000000,
+  "claims": [
+    {"id": "f1", "author": "C", "kind": "FAIL", "docs": ["d1"], "epoch": 0},
+    {"id": "c1", "author": "A", "kind": "FACT", "cites": [], "epoch": 1},
+    {"id": "ans", "author": "D", "kind": "ANSWER", "cites": ["c1"], "epoch": 2}
+  ],
+  "fetches": [
+    {"reader": "A", "object": "f1", "epoch": 0}
+  ],
+  "docs": {"c1": ["d1"], "ans": []},
+  "answer": "ans"
+}

@@ -89,6 +89,22 @@ def run_demo(
         for row in transfers
         if row["reason"] == "BURN" and row["from_pubkey"] == f"ESCROW:{task_id}"
     )
+    steering_by_author: dict[str, int] = {}
+    for row in transfers:
+        if row["reason"] == "PAYOUT_STEERING":
+            steering_by_author[row["to_pubkey"]] = (
+                steering_by_author.get(row["to_pubkey"], 0) + row["amount_µ"]
+            )
+    lease_bonds_burned = sum(
+        row["amount_µ"]
+        for row in transfers
+        if row["reason"] == "BURN"
+        and row["from_pubkey"] is not None
+        and row["from_pubkey"].startswith("BOND:")
+    )
+    pseudo = store.pseudo_balances()
+    if any(balance < 0 for balance in pseudo.values()):
+        raise RuntimeError("pseudo-account solvency violated")
     lines = [
         f"task {task_id}",
         f"closed_epoch {closed_epoch}",
@@ -96,9 +112,12 @@ def run_demo(
         f"bounty_paid_or_burned {bounty_paid_or_burned}",
         f"steering_paid {steering_paid}",
         f"steering_burned {steering_burned}",
+        f"lease_bonds_burned {lease_bonds_burned}",
         f"mean_honest_delta {mean_honest}",
         f"mean_hoarder_delta {mean_hoarder}",
     ]
+    for author in sorted(steering_by_author):
+        lines.append(f"steering_paid_by_author {_short(author)} {steering_by_author[author]}")
     for worker in worker_objs:
         delta = final[worker.pubkey] - initial[worker.pubkey]
         lines.append(
@@ -129,6 +148,32 @@ def demo(workers: int, honest: int, hoarders: int, K: int, D: int, seed: int, wo
     else:
         workdir.mkdir(parents=True, exist_ok=True)
         click.echo(run_demo(workers=workers, honest=honest, hoarders=hoarders, K=K, D=D, seed=seed, root=workdir), nl=False)
+
+
+@main.command(name="eval")
+@click.option("--tasks", "tasks_dir", type=click.Path(path_type=Path), default=Path("corpus/tasks"))
+@click.option("--corpus", "corpus_dir", type=click.Path(path_type=Path), default=None)
+@click.option("--workers", "n_workers", type=int, default=4)
+@click.option("--baseline/--no-baseline", default=True)
+@click.option("--out", "out_path", type=click.Path(path_type=Path), default=Path("report.json"))
+def eval_command(
+    tasks_dir: Path, corpus_dir: Path | None, n_workers: int, baseline: bool, out_path: Path
+) -> None:
+    """Run the protocol with LLM workers vs a single-agent baseline.
+
+    Uses the real endpoint when VSCP_LLM=1, otherwise a deterministic fake
+    LLM answering from the fixtures' gold facts."""
+    from legion.evaluate import format_report, run_eval
+
+    report = run_eval(
+        tasks_dir,
+        corpus_dir=corpus_dir,
+        n_workers=n_workers,
+        baseline=baseline,
+        out_path=out_path,
+    )
+    click.echo(format_report(report))
+    click.echo(f"report written to {out_path}")
 
 
 @main.command()

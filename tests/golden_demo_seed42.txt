@@ -4,11 +4,15 @@ settled_epoch 11
 bounty_paid_or_burned 1000000
 steering_paid 200000
 steering_burned 0
-mean_honest_delta 250000
+lease_bonds_burned 0
+mean_honest_delta 242500
 mean_hoarder_delta -10000
-identity 4fbae3fcca role=honest initial=200000 final=879167 delta=679167
-identity 1a8453333c role=honest initial=200000 final=297222 delta=97222
-identity 86fb98f44e role=honest initial=200000 final=281945 delta=81945
-identity 9404d47259 role=honest initial=200000 final=341666 delta=141666
+steering_paid_by_author 1a8453333c 33333
+steering_paid_by_author 86fb98f44e 66667
+steering_paid_by_author 9404d47259 100000
+identity 4fbae3fcca role=honest initial=200000 final=782500 delta=582500
+identity 1a8453333c role=honest initial=200000 final=308333 delta=108333
+identity 86fb98f44e role=honest initial=200000 final=304167 delta=104167
+identity 9404d47259 role=honest initial=200000 final=375000 delta=175000
 identity 44bb7dc219 role=hoarder initial=200000 final=190000 delta=-10000
 identity 1ca91d311a role=hoarder initial=200000 final=190000 delta=-10000
