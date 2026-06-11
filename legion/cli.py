@@ -81,11 +81,21 @@ def run_demo(
         for row in transfers
         if row["reason"] in {"PAYOUT_FINISHER", "PAYOUT_DERIVATION", "PAYOUT_STEERING", "BURN"}
     )
+    steering_paid = sum(
+        row["amount_µ"] for row in transfers if row["reason"] == "PAYOUT_STEERING"
+    )
+    steering_burned = sum(
+        row["amount_µ"]
+        for row in transfers
+        if row["reason"] == "BURN" and row["from_pubkey"] == f"ESCROW:{task_id}"
+    )
     lines = [
         f"task {task_id}",
         f"closed_epoch {closed_epoch}",
         f"settled_epoch {store.epoch()}",
         f"bounty_paid_or_burned {bounty_paid_or_burned}",
+        f"steering_paid {steering_paid}",
+        f"steering_burned {steering_burned}",
         f"mean_honest_delta {mean_honest}",
         f"mean_hoarder_delta {mean_hoarder}",
     ]

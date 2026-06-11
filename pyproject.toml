@@ -2,7 +2,7 @@
 name = "legion"
 version = "0.1.0"
 description = "Verified Shared-Context Protocol proof of concept"
-readme = "goal.md"
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "click>=8.1",

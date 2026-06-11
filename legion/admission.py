@@ -36,10 +36,6 @@ class MockVerifier:
             decoys.update(doc_decoys)
         return decoys
 
-    @staticmethod
-    def _body_lines(body: str) -> list[str]:
-        return [line.strip() for line in body.splitlines() if line.strip()]
-
     def supports(self, claim: dict[str, Any], spans: list[str]) -> bool:
         body = claim["body"].strip()
         kind = claim["kind"]
@@ -47,17 +43,18 @@ class MockVerifier:
         facts = self._facts()
         decoys = self._decoys()
         if kind == "ANSWER":
-            lines = self._body_lines(body)
-            return (
-                bool(facts)
-                and set(lines) == facts
-                and not (set(lines) & decoys)
-                and all(line in joined_spans for line in lines)
-            )
+            # Coverage-based: every key fact must appear in the support spans
+            # (cited fact bodies and/or evidence spans). The body itself is a
+            # compact summary so answers stay O(1) in size regardless of K.
+            return bool(body) and bool(facts) and all(fact in joined_spans for fact in facts)
         if kind == "FACT":
             return body in facts and body in joined_spans and body not in decoys
-        if kind in {"FAIL", "CONSTRAINT"}:
-            return not spans or body in joined_spans or body.startswith(kind)
+        if kind == "FAIL":
+            # A FAIL is a verified negative result: the rejected candidate must
+            # actually exist in the cited spans and be a decoy per the answer key.
+            return body in decoys and body in joined_spans
+        if kind == "CONSTRAINT":
+            return bool(body) and body in joined_spans
         return False
 
     def solves(self, task_spec: dict[str, Any], claim: dict[str, Any], spans: list[str]) -> bool:
@@ -125,17 +122,31 @@ def _find_all(text: str, needle: str) -> list[int]:
 
 
 def resolve_ref_span(document: str, ref: dict[str, str]) -> str | None:
+    """Resolve a head/tail ref to the *minimal* valid span.
+
+    Returning the smallest head..tail window (deterministic tie-break on the
+    earliest head) prevents an author from picking a common head and a distant
+    tail to capture a wide span containing text they never localized.
+    """
     head = ref.get("head", "")
     tail = ref.get("tail", "")
     if not head or not tail:
         return None
+    tail_starts = _find_all(document, tail)
+    best: tuple[int, int] | None = None  # (span_length, head_start)
     for head_start in _find_all(document, head):
         head_end = head_start + len(head)
-        for tail_start in _find_all(document, tail):
-            tail_end = tail_start + len(tail)
-            if head_end < tail_start and tail_end - head_start <= 1200:
-                return document[head_start:tail_end]
-    return None
+        for tail_start in tail_starts:
+            if tail_start <= head_end:
+                continue
+            length = tail_start + len(tail) - head_start
+            if length <= 1200 and (best is None or (length, head_start) < best):
+                best = (length, head_start)
+            break  # later tails only widen the span for this head
+    if best is None:
+        return None
+    length, head_start = best
+    return document[head_start : head_start + length]
 
 
 class AdmissionGate:
@@ -194,6 +205,8 @@ class AdmissionGate:
                 return False, "unknown_cite", []
             if cited["status"] != "ADMITTED":
                 return False, "unadmitted_cite", []
+            if cited["task_id"] != claim["task_id"]:
+                return False, "cross_task_cite", []
             if not self.store.has_fetched(claim["author"], cited_id, claim["epoch_submitted"]):
                 return False, "unfetched_cite", []
         spans: list[str] = []
@@ -207,4 +220,9 @@ class AdmissionGate:
             if span is None:
                 return False, "bad_ref", []
             spans.append(span)
+        # Cited admitted claims are provenance: their bodies count as support
+        # spans, so claims (notably ANSWERs) need not re-attach upstream
+        # evidence that was already verified at the cited claim's admission.
+        for cited_id in claim["cites"]:
+            spans.append(self.store.claim(cited_id)["body"])
         return True, "ok", spans

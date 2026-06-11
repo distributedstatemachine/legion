@@ -2,11 +2,13 @@ task task-45eeb0d5b0698d68
 closed_epoch 5
 settled_epoch 11
 bounty_paid_or_burned 1000000
-mean_honest_delta 200000
-mean_hoarder_delta 0
-identity 4fbae3fcca role=honest initial=200000 final=812500 delta=612500
-identity 1a8453333c role=honest initial=200000 final=275000 delta=75000
-identity 86fb98f44e role=honest initial=200000 final=237500 delta=37500
-identity 9404d47259 role=honest initial=200000 final=275000 delta=75000
-identity 44bb7dc219 role=hoarder initial=200000 final=200000 delta=0
-identity 1ca91d311a role=hoarder initial=200000 final=200000 delta=0
+steering_paid 200000
+steering_burned 0
+mean_honest_delta 250000
+mean_hoarder_delta -10000
+identity 4fbae3fcca role=honest initial=200000 final=879167 delta=679167
+identity 1a8453333c role=honest initial=200000 final=297222 delta=97222
+identity 86fb98f44e role=honest initial=200000 final=281945 delta=81945
+identity 9404d47259 role=honest initial=200000 final=341666 delta=141666
+identity 44bb7dc219 role=hoarder initial=200000 final=190000 delta=-10000
+identity 1ca91d311a role=hoarder initial=200000 final=190000 delta=-10000

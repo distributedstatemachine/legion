@@ -52,6 +52,11 @@ class Store:
               "balance_µ" INTEGER NOT NULL CHECK("balance_µ" >= 0)
             );
 
+            CREATE TABLE IF NOT EXISTS pseudo_accounts(
+              account TEXT PRIMARY KEY,
+              "balance_µ" INTEGER NOT NULL CHECK("balance_µ" >= 0)
+            );
+
             CREATE TABLE IF NOT EXISTS transfers(
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               epoch INTEGER NOT NULL,
@@ -223,6 +228,31 @@ class Store:
     def _is_pseudo(pubkey: str | None) -> bool:
         return pubkey is None or pubkey.startswith(("ESCROW:", "BOND:", "FEE_POOL", "BURN"))
 
+    def pseudo_balances(self) -> dict[str, int]:
+        rows = self.conn.execute(
+            'SELECT account, "balance_µ" FROM pseudo_accounts ORDER BY account'
+        ).fetchall()
+        return {row["account"]: int(row["balance_µ"]) for row in rows}
+
+    def _debit_pseudo(self, account: str, amount: int) -> None:
+        row = self.conn.execute(
+            'SELECT "balance_µ" FROM pseudo_accounts WHERE account = ?', (account,)
+        ).fetchone()
+        current = int(row["balance_µ"]) if row is not None else 0
+        if current < amount:
+            raise ValueError(f"insufficient pseudo balance for {account}")
+        self.conn.execute(
+            'UPDATE pseudo_accounts SET "balance_µ" = "balance_µ" - ? WHERE account = ?',
+            (amount, account),
+        )
+
+    def _credit_pseudo(self, account: str, amount: int) -> None:
+        self.conn.execute(
+            'INSERT INTO pseudo_accounts(account, "balance_µ") VALUES(?, ?) '
+            'ON CONFLICT(account) DO UPDATE SET "balance_µ" = "balance_µ" + excluded."balance_µ"',
+            (account, amount),
+        )
+
     def _apply_transfer(
         self,
         epoch: int,
@@ -235,23 +265,29 @@ class Store:
             raise ValueError(f"unknown transfer reason: {reason}")
         if amount < 0:
             raise ValueError("negative transfer amount")
-        if from_pubkey is not None and not self._is_pseudo(from_pubkey):
-            current = self.balance(from_pubkey)
-            if current < amount:
-                raise ValueError(f"insufficient balance for {from_pubkey}")
-            self.conn.execute(
-                'UPDATE identities SET "balance_µ" = "balance_µ" - ? WHERE pubkey = ?',
-                (amount, from_pubkey),
-            )
-        if to_pubkey is not None and not self._is_pseudo(to_pubkey):
-            self.conn.execute(
-                'INSERT OR IGNORE INTO identities(pubkey, "balance_µ") VALUES(?, 0)',
-                (to_pubkey,),
-            )
-            self.conn.execute(
-                'UPDATE identities SET "balance_µ" = "balance_µ" + ? WHERE pubkey = ?',
-                (amount, to_pubkey),
-            )
+        if from_pubkey is not None:
+            if self._is_pseudo(from_pubkey):
+                self._debit_pseudo(from_pubkey, amount)
+            else:
+                current = self.balance(from_pubkey)
+                if current < amount:
+                    raise ValueError(f"insufficient balance for {from_pubkey}")
+                self.conn.execute(
+                    'UPDATE identities SET "balance_µ" = "balance_µ" - ? WHERE pubkey = ?',
+                    (amount, from_pubkey),
+                )
+        if to_pubkey is not None:
+            if self._is_pseudo(to_pubkey):
+                self._credit_pseudo(to_pubkey, amount)
+            else:
+                self.conn.execute(
+                    'INSERT OR IGNORE INTO identities(pubkey, "balance_µ") VALUES(?, 0)',
+                    (to_pubkey,),
+                )
+                self.conn.execute(
+                    'UPDATE identities SET "balance_µ" = "balance_µ" + ? WHERE pubkey = ?',
+                    (amount, to_pubkey),
+                )
         self.conn.execute(
             'INSERT INTO transfers(epoch, from_pubkey, to_pubkey, "amount_µ", reason) '
             "VALUES(?, ?, ?, ?, ?)",
@@ -308,9 +344,11 @@ class Store:
             value = self.read_evidence_unmetered(object_id)
         else:
             row = self.conn.execute(
-                "SELECT body FROM claims WHERE claim_id = ?", (object_id,)
+                "SELECT body, status FROM claims WHERE claim_id = ?", (object_id,)
             ).fetchone()
-            if row is None:
+            # Only ADMITTED claim bodies are servable: PENDING/REJECTED bodies
+            # would otherwise leak pre-admission information to readers.
+            if row is None or row["status"] != "ADMITTED":
                 raise KeyError(object_id)
             value = row["body"]
         self.conn.execute(
@@ -411,7 +449,7 @@ class Store:
                     None,
                 ),
             )
-            self._apply_transfer(epoch, claim["author"], None, ADMISSION_FEE, "FEE")
+            self._apply_transfer(epoch, claim["author"], "FEE_POOL", ADMISSION_FEE, "FEE")
         return claim["claim_id"]
 
     def parse_claim_row(self, row: sqlite3.Row) -> dict[str, Any]:

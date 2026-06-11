@@ -5,7 +5,8 @@ import sqlite3
 import pytest
 
 from legion import claims, crypto, tasks
-from legion.admission import AdmissionGate, MockVerifier
+from legion.admission import AdmissionGate, MockVerifier, resolve_ref_span
+from legion.cli import run_demo
 from legion.store import Store
 
 
@@ -135,3 +136,67 @@ def test_fetch_gating_for_citations(tmp_path):
     store.submit_claim(fetched)
     gate.process_pending()
     assert store.claim(fetched["claim_id"])["status"] == "ADMITTED"
+
+
+def test_resolve_ref_span_returns_minimal_span():
+    # An author picking a repeated head and a distant tail must not capture a
+    # wide span containing sentences they never localized.
+    document = (
+        "alpha beta gamma early words here and lots of intervening filler text. "
+        "unrelated sentence the author never localized sits in the middle here. "
+        "alpha beta gamma the actual short span tail end"
+    )
+    ref = {"head": "alpha beta gamma", "tail": "tail end"}
+    span = resolve_ref_span(document, ref)
+    assert span == "alpha beta gamma the actual short span tail end"
+    assert "never localized" not in span
+
+
+def test_fetch_serves_admitted_claims_only(tmp_path):
+    store = Store(tmp_path)
+    task_id = _task(store, tmp_seed=17, K=2)
+    gate = AdmissionGate(store, MockVerifier(store.answer_key(task_id)))
+    author = _identity(store, "fetch-author", 200_000)
+    reader = _identity(store, "fetch-reader", 0)
+
+    pending = _fact_claim(store, task_id, author, 0)
+    store.submit_claim(pending)
+    with pytest.raises(KeyError):
+        store.fetch(reader.pubkey, pending["claim_id"])
+
+    gate.process_pending()
+    assert store.fetch(reader.pubkey, pending["claim_id"]) == pending["body"]
+
+    spec = store.task_spec(task_id)
+    rejected = claims.build_claim(
+        private_key=author.private_key,
+        author=author.pubkey,
+        task_id=task_id,
+        kind="FACT",
+        body="secret pending body that must not leak before admission ever",
+        evidence=[{"doc_hash": spec["docs"][0]["doc_hash"], "ref": {"head": "x", "tail": "y"}}],
+    )
+    store.submit_claim(rejected)
+    gate.process_pending()
+    assert store.claim(rejected["claim_id"])["status"] == "REJECTED"
+    with pytest.raises(KeyError):
+        store.fetch(reader.pubkey, rejected["claim_id"])
+
+
+def test_pseudo_account_ledger_and_global_conservation(tmp_path):
+    run_demo(workers=6, honest=4, hoarders=2, K=6, D=3, seed=42, root=tmp_path)
+    store = Store(tmp_path)
+    minted = 2_000_000 + 6 * 200_000  # sponsor + worker grants in run_demo
+    burned = sum(
+        row["amount_µ"] for row in store.transfer_rows() if row["to_pubkey"] is None
+    )
+    identity_total = sum(store.balances().values())
+    pseudo = store.pseudo_balances()
+    assert all(balance >= 0 for balance in pseudo.values())
+    # Money is only created by the demo's identity grants; everything else is
+    # conserved across identities, pseudo accounts (ESCROW/FEE_POOL/BOND), and burns.
+    assert identity_total + sum(pseudo.values()) + burned == minted
+    # The task escrow is exactly drained by settlement.
+    escrow = {k: v for k, v in pseudo.items() if k.startswith("ESCROW:")}
+    assert all(balance == 0 for balance in escrow.values())
+    store.close()
