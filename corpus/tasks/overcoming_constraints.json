@@ -1,6 +1,6 @@
 {
   "name": "overcoming_constraints",
-  "question": "How do the mountain railway and the coral reef each overcome a hard physical constraint of their environment?",
+  "question": "How does each spiral give the train a gentle gradient by trading horizontal distance, and what shelter and sugars do coral and algae trade through photosynthesis?",
   "documents": ["railway.txt", "reef.txt"],
   "gold_facts": [
     "Each spiral allows the train to cross over its own path at a higher level, trading horizontal distance for a gentle and manageable gradient.",

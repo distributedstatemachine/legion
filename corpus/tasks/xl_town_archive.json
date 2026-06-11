@@ -1,0 +1,24 @@
+{
+  "name": "xl_town_archive",
+  "question": "What prompted the town to rebuild the quay on oak pilings, order shielded lanterns for the telescope, convert the waterwheel mill to turbine drive, relay the leaking aqueduct in clay pipe, raise the bridge span in dressed stone, and add a fireproof brick storehouse, widen the eastern rampart with a paved patrol walk, and sink deeper boreholes lined with iron rings into the aquifer?",
+  "documents": [
+    "xl/aqueduct_survey.txt",
+    "xl/bridge_accounts.txt",
+    "xl/granary_minutes.txt",
+    "xl/harbor_chronicle.txt",
+    "xl/mill_registry.txt",
+    "xl/observatory_log.txt",
+    "xl/walls_ledger.txt",
+    "xl/wells_survey.txt"
+  ],
+  "gold_facts": [
+    "The surveyor's report concluded that the wooden aqueduct leaked a third of its flow, and the council voted to relay the whole course in fired clay pipe before the next dry summer.",
+    "The bridge accounts show that the central span was raised by four feet and rebuilt in dressed stone after two winters in which ice floes carried away the old wooden arches.",
+    "The granary minutes record that a second fireproof storehouse was raised in brick on the east bank after the great fire consumed half the common grain reserve.",
+    "The harbormaster's ledger records that the deep-water quay was rebuilt on oak pilings after the great storm season destroyed the original timber framework.",
+    "The grain mill converted from waterwheel to turbine drive in a single winter, doubling its throughput while halving the toll charged to upland farmers.",
+    "The observatory's principal telescope lost three nights of observation each month to lamplight from the new quarter until the council ordered shielded street lanterns.",
+    "The walls ledger notes that the eastern rampart was widened to carry a paved patrol walk after smugglers scaled the old narrow parapet unseen on moonless nights.",
+    "The wells survey concluded that the shared aquifer had dropped below the old pump intakes, and the town sank three deeper boreholes lined with iron rings."
+  ]
+}

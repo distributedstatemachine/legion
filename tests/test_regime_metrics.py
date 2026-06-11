@@ -32,8 +32,9 @@ def test_long_fixture_metrics_fan_out(tmp_path):
     assert protocol["redundant_work_avoided"] >= 0
     assert protocol["peak_parallel_workers"] >= 2
     assert protocol["verifier_calls"] > 0
-    assert report["cost_ratio"] is not None and report["cost_ratio"] > 0
-    assert report["char_ratio"] is not None and report["char_ratio"] > 0
+    # No assertion on ratio direction - that's a finding, not an invariant.
+    assert report["token_ratio"] is not None and report["token_ratio"] > 0
+    assert report["cost_ratio_calls_legacy"] is not None and report["cost_ratio_calls_legacy"] > 0
 
 
 def test_sweep_writes_regime_grid(tmp_path):
@@ -42,9 +43,12 @@ def test_sweep_writes_regime_grid(tmp_path):
     assert out.exists()
     on_disk = json.loads(out.read_text(encoding="utf-8"))
     assert on_disk == sweep
-    # Two document classes x two worker counts.
-    assert len(sweep["cells"]) == 4
+    # Three document classes (short/long/xl) x two worker counts.
+    assert len(sweep["cells"]) == 6
+    xl_cells = [cell for cell in sweep["cells"] if cell["doc_class"] == "xl"]
+    assert xl_cells and all(cell["onecall_feasible"] is False for cell in xl_cells)
     for cell in sweep["cells"]:
-        assert cell["solved"] is True
-        assert cell["cost_ratio"] > 0
+        assert cell["solved_protocol"] is True
+        assert cell["solved_iterative"] is True
+        assert cell["token_ratio"] > 0
         assert cell["redundant_work_avoided"] >= 0

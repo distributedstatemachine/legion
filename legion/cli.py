@@ -156,6 +156,7 @@ def demo(workers: int, honest: int, hoarders: int, K: int, D: int, seed: int, wo
 @click.option("--workers", "n_workers", type=int, default=4)
 @click.option("--baseline/--no-baseline", default=True)
 @click.option("--sweep", is_flag=True, default=False, help="Run the regime-study grid.")
+@click.option("--dry-run", is_flag=True, default=False, help="Print the plan; issue no calls.")
 @click.option("--out", "out_path", type=click.Path(path_type=Path), default=None)
 def eval_command(
     tasks_dir: Path,
@@ -163,14 +164,47 @@ def eval_command(
     n_workers: int,
     baseline: bool,
     sweep: bool,
+    dry_run: bool,
     out_path: Path | None,
 ) -> None:
-    """Run the protocol with LLM workers vs a single-agent baseline.
+    """Run the protocol with LLM workers vs honest baselines.
 
-    Uses the real endpoint when VSCP_LLM=1, otherwise a deterministic fake
-    LLM answering from the fixtures' gold facts. With --sweep, runs the
-    document-length x worker-count regime grid and writes regime.json."""
-    from legion.evaluate import format_report, format_sweep, run_eval, run_sweep
+    Real endpoint iff VSCP_LLM=1 and an API key is set (OpenRouter by
+    default); otherwise a deterministic answer-key-free fake LLM. With
+    --sweep, runs the document-class x worker-count regime grid."""
+    from legion import llm_client
+    from legion.evaluate import (
+        cost_per_1k_tokens,
+        format_report,
+        format_sweep,
+        max_total_llm_calls,
+        run_eval,
+        run_sweep,
+    )
+    from legion.tasks_realdoc import load_fixture
+    from legion.workers.llm import default_max_calls
+
+    backend = "real" if llm_client.real_path_enabled() else "fake"
+    if dry_run:
+        fixtures = sorted(Path(tasks_dir).glob("*.json"))
+        per_fixture = [
+            n_workers * default_max_calls() + len(load_fixture(p)["documents"]) + 3
+            for p in fixtures
+        ]
+        max_calls = min(max_total_llm_calls(), sum(per_fixture))
+        assumed_tokens_per_call = 2000
+        est_max_cost = max_calls * assumed_tokens_per_call / 1000 * cost_per_1k_tokens()
+        click.echo(f"backend {backend}")
+        click.echo(f"model {llm_client.resolve_model() if backend == 'real' else '-'}")
+        click.echo(f"endpoint {llm_client.resolve_url() if backend == 'real' else '-'}")
+        click.echo(f"fixtures {len(fixtures)}")
+        click.echo(f"estimated_max_calls {max_calls} (hard cap {max_total_llm_calls()})")
+        click.echo(
+            f"estimated_max_cost ${est_max_cost:.2f} "
+            f"(assuming {assumed_tokens_per_call} tokens/call at "
+            f"${cost_per_1k_tokens()}/1k tokens)"
+        )
+        return
 
     if sweep:
         out = out_path or Path("regime.json")

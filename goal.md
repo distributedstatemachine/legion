@@ -1,111 +1,87 @@
-# Legion — Phase 3 Specification
+# Legion — Phase 3.1 Amendment: Honest Baselines + Real LLM (OpenRouter)
 
-**Version:** 3.0 (builds on `distributedstatemachine/legion`, commit `627e518` or later — the Phase 2 head)
-**Audience:** an autonomous coding agent working *inside the existing repo*. Self-contained. Where silent, choose the simplest option consistent with §7 and append the decision to `docs/DECISIONS.md`. Do not regress any currently passing test (62 at the Phase 2 head); settlement-semantic changes stay behind the existing version flag.
+**Version:** 3.1 (amends Phase 3; builds on `distributedstatemachine/legion`, commit `2982809` or later)
+**Audience:** an autonomous coding agent inside the repo. Self-contained. Do not regress the 80 passing tests; where a Phase 3 number changes because the baseline was wrong, that is expected — update `REGIME_FINDINGS.md` rather than preserving the old figure.
 
-**Premise.** Phase 2 shipped steering v2, a hardened verifier, an equivalence harness, and an eval pipeline that honestly reported the protocol losing to a single-agent baseline by ~7× *at toy scale* (1 kB docs, 2 workers). Phase 3 has one through-line: **find and measure the regime where the protocol's coordination actually pays for itself**, close the gaps the Phase 2 review found, and take the first real step toward distribution by proving the ledger is independently re-derivable. No consensus, no networking between machines beyond local processes, no token/chain integration.
-
----
-
-## 1. Scope
-
-### In scope
-1. **Carryover fixes** from the Phase 2 review (§2): the broken `python -m` CLI, the unbuilt §4A simulation + statistical goldens, and a long-document eval fixture.
-2. **The economics regime study** (§3): sweep document length, worker count, and task width; emit the metrics that locate the protocol's break-even point against the baseline; add the eligible-steering-reader metric.
-3. **Multi-process operation** (§4): N worker processes + 1 coordinator process against one WAL SQLite ledger, with documented concurrency discipline. Still single-machine, still one trusted coordinator.
-4. **Light-client re-derivation** (§5): a standalone verifier that replays the ledger from transfers + claims alone and reconstructs every balance and settlement, byte-identical, in a separate process. This is the cheap first audit that the Phase 1/2 determinism work was building toward.
-
-### Out of scope
-Real consensus or BFT; cross-machine networking; P2P gossip; substrate/chain selection; reputation; cross-task identity; Shapley/hypergraph *settlement* (the §4A sim implements Shapley only for its own goldens, never for `legion.settlement`). No new runtime dependencies outside the stdlib except `pytest`/`hypothesis` (dev) — the LLM path stays on `urllib`.
+**Why this exists.** The Phase 3 eval compared the protocol against a baseline that was false in two compounding ways: (1) the fake `complete` stub had a `TASK: BASELINE` branch returning `" ".join(fixture["gold_facts"])` — the answer key, in one call (`legion/evaluate.py` line ~81), so the baseline never *solved* anything, it was *handed* the answer; and (2) even setting the secret aside, a one-call baseline is an infinite-context oracle that does not exist — a real agent loops retrieve→read→reason→synthesize over many calls. Every `cost_ratio` in `REGIME_FINDINGS.md` is therefore measured against a fiction, and it penalizes the protocol. This amendment fixes the comparison and enables real-endpoint runs via OpenRouter.
 
 ---
 
-## 2. Carryover fixes (do these first; each ends green)
+## Part A — Honest baselines
 
-### 2.1 CLI entry point
-`python -m legion.cli <cmd>` currently imports and exits 0 silently (no `__main__` guard). Add `if __name__ == "__main__": main()` to `legion/cli.py`. Add `tests/test_cli_entrypoint.py` invoking `python -m legion.cli demo --workers 4 --honest 3 --hoarders 1 --seed 7 --workdir <tmp>` as a subprocess and asserting exit 0 **and** non-empty stdout containing `mean_honest_delta`. The silent-success failure mode is the thing being tested — a no-op must fail the test.
+### A1. Kill the gold-fact shortcut (the load-bearing fix)
+Remove any branch in `make_fake_complete` (and anywhere else) that returns `fixture["gold_facts"]` — wholesale or joined — in response to a baseline/synthesis prompt. The gold facts may be referenced **only** in grading (`solved = all(fact in answer ...)`), never in any string a model-or-stub returns as an answer. The fake stub must produce baseline answers by the *same per-document extraction path it uses for workers*: read each document, extract its candidate sentence, then synthesize. A fake baseline must be able to *fail* (miss a fact) — if it can't fail, it isn't a baseline.
 
-### 2.2 Build §4A — the research simulation and statistical goldens
-Phase 2 implemented only the settlement *reference* (`tools/sim/sim.py`, float, settlement-only). Phase 3 adds the full agent-based model and its goldens, exactly as specified in **§4A of the Phase 2 spec v2.1** (world model, the seven strategies HONEST/HOARDER/SPAMMER/RING_SYBIL/RING_BENEF/POISONER/HYBRID, flat + Shapley settlement, `run_many`). Place the agent model in `tools/sim/model.py` (keep the existing `sim.py` settlement reference; `model.py` may import it). Implement `tools/sim/experiments.py` and `tests/test_sim_goldens.py` with the eight statistical-golden bands of §4A.6.
+**Invariant test (`tests/test_realdoc_eval.py`), the test that would have caught this:**
+- Wrap the eval's `complete` callable in a spy that records every prompt. Assert that for every baseline and every worker prompt, **no `gold_fact` substring appears in the prompt** the model receives. (Gold facts enter only the grader.)
+- Assert `baseline.llm_calls > 1` on every multi-document fixture for both fake and (when enabled) real backends.
+- Assert the iterative baseline can score `solved=False` on at least one constructed fixture where extraction is made to miss (e.g. a fixture whose gold fact is not the most-relevant-looking sentence), proving the grader is real and not rubber-stamping.
 
-Conformance rule, restated: ordering assertions (the `>`/`<` clauses — honest > hoarder, lone poisoner profitable under Shapley but not flat, all-hybrid ≤ 0.75× all-honest, etc.) **may not be weakened**; numeric bands may be widened only with the measured value recorded in `DECISIONS.md` and called out in the PR. `tools/sim/` still must not import `legion` (CI grep already enforces this; keep it passing).
+### A2. Two baselines, both reported
+Replace the single `_run_baseline` with two, run and reported side by side:
 
-### 2.3 Long-document eval fixture
-Add one fixture task `corpus/tasks/long_*.json` backed by genuinely long documents (each 20–50 kB; 4–8 documents; public-domain or original CC0 text committed to `corpus/`). The question must require evidence from ≥3 documents so the decomposition is real. This is the fixture the regime study (§3) leans on; the existing short fixtures stay as the fast-CI path.
+1. **`baseline_onecall`** (optimistic lower bound): the current single-prompt, all-documents-concatenated call. *Keep it*, but relabel it as the infinite-context oracle reference. On a corpus that exceeds the model's context window it must be recorded as `infeasible` (see A4), not silently truncated.
+2. **`baseline_iterative`** (the fair comparator): a competent agent loop with no privileged access —
+   - one extraction call per document (retrieve the document, ask for the sentence most relevant to the question),
+   - one synthesis call combining the extracted sentences into an answer,
+   - optionally one re-query call if synthesis reports an unsupported gap (cap the loop at `n_docs + 2` calls).
+   It sees the same documents the protocol's workers can fetch — do **not** hobble it (no withholding documents, no sub-task-width call caps). The credible baseline is the obvious competent approach; the protocol must beat what you would actually deploy.
 
----
+The grader is byte-identical across protocol, `baseline_onecall`, and `baseline_iterative`; the only variable is method.
 
-## 3. Economics regime study (the core of Phase 3)
+### A3. Token-based costing as the primary metric
+- Add a `CountingComplete` field `total_tokens` estimated as `ceil(chars / 4)` over prompt **and** completion (document the 4-chars/token approximation in `DECISIONS.md`; replace with the endpoint's real usage numbers when available — see B3).
+- New headline metric `token_ratio = protocol_tokens / baseline_iterative_tokens`, reported first. Demote `cost_ratio` (calls) to a clearly-labelled secondary with a one-line note that per-call pricing structurally penalizes any decomposed system and is informative only at equal call granularity.
+- Add `cost_per_1k_tokens` (env `VSCP_COST_PER_1K_TOKENS`, default e.g. `0.15`) and report `est_cost_*` from tokens, not calls. Keep `cost_per_call` only for the legacy secondary.
 
-**Goal:** turn the single honest "protocol loses 7×" data point into a curve, and identify whether/where a crossover exists. This is measurement, not optimization — do not tune the mechanism to manufacture a win.
+### A4. Context-window handling (makes the decisive experiment measurable)
+- Add `VSCP_CONTEXT_WINDOW_TOKENS` (default e.g. `128000`). Before issuing the one-call baseline, if the concatenated prompt's estimated tokens exceed it, record `baseline_onecall = {"feasible": false, "reason": "corpus exceeds context window"}` and exclude it from ratios (the iterative baseline and protocol still run). This is the regime `REGIME_FINDINGS.md` extrapolated to: where the oracle baseline is not costly but *impossible*.
+- Add at least one fixture (`corpus/tasks/xl_*.json`) whose corpus deliberately exceeds the default window so the infeasible branch is exercised in CI on the fake path (the fake stub honors the same token estimate and marks one-call infeasible).
 
-### 3.1 New eval metrics
-Extend `legion/evaluate.py`'s per-task `protocol` report block (currently `epochs, llm_calls, payoffs, settled, solved`) with:
-- `distinct_eligible_steering_readers`: the count from the steering-v2 eligibility pass (promotes the Phase 2 DECISIONS.md observation that steering concentrates wherever search paths cross — on single-doc-per-subtask tasks this was effectively 1; the study measures whether it fans out on multi-doc tasks).
-- `redundant_work_avoided`: number of admitted FAIL/CONSTRAINT claims fetched by ≥1 productive reader (a proxy for the reuse the paper credits for its cost savings).
-- `peak_parallel_workers`: max workers holding a live lease in any single epoch.
-- `verifier_calls` (already counted separately by the harness — surface it in the report).
-And per-run top level: `total_llm_calls_protocol`, `total_llm_calls_baseline`, `cost_ratio = est_cost_protocol / est_cost_baseline`.
-
-### 3.2 The sweep
-`legion eval --sweep` (or a `tools/regime_sweep.py` driver) runs the eval across the grid:
-- document length ∈ {short fixtures, long fixture (§2.3)},
-- `n_workers` ∈ {1, 2, 4, 8},
-- and reports `cost_ratio`, `solved`, `distinct_eligible_steering_readers`, and `redundant_work_avoided` for each cell.
-Writes `regime.json` and prints a grid. On the fake-LLM path this must run in CI (deterministic); with a real endpoint it produces the headline numbers.
-
-### 3.3 Interpretation artifact
-Add `docs/REGIME_FINDINGS.md`: a short, honest write-up of what the sweep shows — including, prominently, if no crossover is found at the scales tested. State the conditions under which the protocol would be expected to win (long multi-doc tasks where baseline context cost grows and cross-worker reuse is high) and whether the data supports that expectation. A null result is a valid, required outcome; do not bury it.
-
-### 3.4 Tests
-`tests/test_regime_metrics.py`: on the long fixture with the fake LLM, assert `distinct_eligible_steering_readers >= 2` (the multi-doc fan-out the Phase 2 review predicted), `redundant_work_avoided >= 0` is reported, and `cost_ratio` is present and positive. No assertion on crossover direction — that's a finding, not an invariant.
+### A5. Findings doc
+Rewrite `docs/REGIME_FINDINGS.md` against the corrected baselines. Report `token_ratio` vs the **iterative** baseline as the headline, show all three runners per cell, and state plainly where (if anywhere) the protocol now wins — especially on the XL fixture where `baseline_onecall` is infeasible. Preserve the §9 honesty rule: a null result, if that's what the corrected data shows, is stated, not buried. Note explicitly that the Phase 3 numbers were against a false baseline and are superseded.
 
 ---
 
-## 4. Multi-process operation
+## Part B — Real LLM via OpenRouter
 
-**Goal:** prove the architecture survives real concurrency, still single-machine, still one coordinator. This validates the Phase 1 claim that only task-lease acquisition needs serialization while knowledge claims are commutative.
+The existing OpenAI-compatible client in `admission.py` (uses `VSCP_LLM_URL` + bearer key) already speaks OpenRouter's protocol. This part wires it end to end and routes worker/baseline calls through it, not just the verifier.
 
-### 4.1 Model
-- One **coordinator** process: the sole writer for admission, epoch advance, close, and settlement (its existing `tick()`). It owns those transitions exclusively.
-- N **worker** processes: each runs the existing worker loop in its own process, connecting to the same `ledger.db` (WAL). Workers only ever call lease/fetch/submit — never admit/settle.
-- Concurrency discipline (document in `DECISIONS.md`, enforce in code): lease acquisition is an atomic `UPDATE ... WHERE status='PENDING' AND ...` guarded by `BEGIN IMMEDIATE`, so exactly one worker wins a contended subtask; claim submission is an independent insert that does not block on other workers; SQLite `busy_timeout` set to a documented value; all writers retry on `SQLITE_BUSY` up to a bounded count.
+### B1. Unified client
+Extract the HTTP logic from `LLMVerifier` into `legion/llm_client.py: openai_chat(messages, *, model, max_tokens, temperature) -> (text, usage)` returning both content and the provider's `usage` block when present. Configuration, all via env:
+- `VSCP_LLM=1` enables the real path (unchanged).
+- `VSCP_LLM_URL` default `https://openrouter.ai/api/v1/chat/completions`.
+- API key from `OPENROUTER_API_KEY` or `VSCP_LLM_API_KEY` or `OPENAI_API_KEY` (first present wins).
+- `VSCP_LLM_MODEL` default a documented OpenRouter model string (e.g. `openai/gpt-4o-mini`); `VSCP_VERIFIER_MODEL` may override it for the verifier specifically.
+- OpenRouter niceties: send optional `HTTP-Referer` / `X-Title` headers from `VSCP_LLM_REFERER` / `VSCP_LLM_TITLE` when set (OpenRouter ranks/labels by these; harmless if absent).
+- Keep: temperature 0, 30 s timeout, ≤ 1 transport retry, never retry a NO/parse failure.
+`LLMVerifier` becomes a thin caller of this client (its injection defenses and deterministic quote check are unchanged and must keep passing the injection suite).
 
-### 4.2 Harness
-`legion run-cluster --workers N --task <fixture> --workdir <dir>` spawns the coordinator and N worker subprocesses (stdlib `multiprocessing` or `subprocess`), runs until the task settles or a timeout, then prints the same per-identity settlement statement as `demo`.
+### B2. Route workers and baselines through the client
+`run_eval`'s real branch builds `complete` from `openai_chat` and injects it into both `LLMWorker`s and both baselines (currently only the verifier path is real). The fake stub stays the default and the CI path. Selection unchanged: real iff `VSCP_LLM=1` and a key is present; otherwise fake.
 
-### 4.3 Tests
-`tests/test_multiprocess.py` (may be marked slow): spawn the coordinator + 4 worker processes on the short fixture; assert the task settles, conservation holds to the µ, no subtask is completed by two authors (no double-lease), and total BOND in == out. A contention test: two workers targeting the same single available subtask — exactly one acquires the lease, the other backs off cleanly.
+### B3. Real token accounting
+When the provider returns a `usage` block, use its `prompt_tokens` / `completion_tokens` for costing instead of the char/4 estimate; fall back to the estimate only when usage is absent. Record which was used per run in the report (`"token_source": "provider" | "estimated"`).
+
+### B4. Budget and safety rails (real money)
+- Per-run hard cap `VSCP_MAX_TOTAL_LLM_CALLS` (default e.g. `500`); on exceed, stop issuing calls, mark the run `budget_capped: true`, and still emit a partial report.
+- The existing per-worker `VSCP_MAX_LLM_CALLS_PER_WORKER` stays.
+- Never log the API key. A `--dry-run` flag prints the planned model, endpoint, estimated max calls, and estimated max cost, then exits without calling.
+- `legion eval` prints the resolved backend, model, and (post-run) actual token usage and estimated dollar cost.
+
+### B5. Tests (all offline / CI-safe)
+- `tests/test_llm_client.py`: against a fake transport (monkeypatched `urllib`), assert request shape (model, temperature 0, auth header present, optional referer/title forwarded), `usage` parsing, the single-retry-on-transport-error / no-retry-on-bad-output policy, and that the key never appears in any logged/printed output.
+- The injection suite (`tests/test_verifier_injection.py`) must still pass with the verifier delegating to the extracted client.
+- A skipped-by-default `tests/test_openrouter_live.py` (runs only when `VSCP_LLM=1` + key present): one real round-trip on the smallest fixture asserting a non-empty answer and a populated `usage` block. Mirrors the existing LLM-smoke-skip convention.
 
 ---
 
-## 5. Light-client re-derivation
+## Milestones (strict order; each ends green)
+- **P3.1-M1 — Honest baselines** (Part A): gold-fact shortcut removed; dual baselines; token costing primary; context-window infeasibility + XL fixture; the prompt-leak invariant test and `baseline.llm_calls > 1` test; `REGIME_FINDINGS.md` rewritten on fake-path data.
+- **P3.1-M2 — OpenRouter** (Part B): unified client; workers + baselines on the real path; real token accounting; budget rails + `--dry-run`; offline client tests + skipped live test.
 
-**Goal:** the cheapest possible audit — a second program, sharing no code path with the live engine's write side, that reconstructs the entire economic state from the immutable log and must agree to the µ. This is the determinism work's payoff and the first concrete step toward trust-minimization.
+## Definition of done
+`pytest -q` green with ≥ 6 new tests; the prompt-leak test fails if any gold fact reaches a model prompt; both baselines reported per cell with `token_ratio` headline; `legion eval --dry-run` prints plan without calling; `legion eval` with `VSCP_LLM=1` + `OPENROUTER_API_KEY` runs against OpenRouter (verified manually, not in CI); `REGIME_FINDINGS.md` states the corrected result and flags the Phase 3 numbers as superseded; `DECISIONS.md` updated (token approximation, model defaults, baseline definitions); README documents the OpenRouter env vars in ≤ 12 lines.
 
-### 5.1 The replayer
-`tools/lightclient.py`: given a `ledger.db` (read-only connection), independently:
-1. Replays `transfers` in `id` order to reconstruct every identity and pseudo-account balance; asserts they equal the live `identities` / `pseudo_accounts` tables.
-2. For every `CLOSED` task with `settlement_applied=1`, rebuilds the snapshot from `claims` + `claim_cite_overrides` + `fetches`, calls `legion.settlement.settle(snapshot, version=task.settlement_version)`, and asserts the resulting transfer multiset equals the `PAYOUT_*`/`BURN`/`FEE_REFUND` transfers actually recorded for that task.
-3. Re-runs the deterministic admission checks (signature, ref-tag spans, fetch-gating) for every `ADMITTED` claim and asserts none should have been rejected. (The semantic verifier verdict is *not* re-derivable offline; record this boundary explicitly — the light client checks everything deterministic and flags the verifier as the remaining trust assumption.)
-
-### 5.2 CLI + test
-`legion audit <ledger.db>` runs the replayer and prints PASS with counts (identities reconciled, tasks re-settled, claims re-checked) or the first divergence. `tests/test_lightclient.py`: run a full demo, then audit its ledger in a **separate process** (subprocess, fresh interpreter) and assert PASS; then mutate one recorded payout amount in a copy of the DB and assert the audit FAILs with a clear diff. The cross-process requirement is the point — it proves re-derivation doesn't depend on in-memory state.
-
----
-
-## 6. Milestones (strict order; each ends green)
-
-- **P3-M1 — Carryover** (§2): CLI guard + test; §4A sim model, experiments, and eight statistical goldens; long-document fixture.
-- **P3-M2 — Regime study** (§3): new metrics, the sweep driver, `regime.json` in CI on the fake path, `REGIME_FINDINGS.md`.
-- **P3-M3 — Multi-process** (§4): cluster harness, concurrency discipline, double-lease and contention tests.
-- **P3-M4 — Light client** (§5): replayer, `audit` CLI, cross-process pass + tamper-detection tests.
-
-## 7. Invariants (carried forward — all must still hold)
-Conservation to the µ per task; settlement purity and cross-process byte determinism per version; append-only triggers; fetch-gated citations and ADMITTED-only serving; keep-fraction invariance; pseudo-account solvency and global conservation; steering-v2 ring-capture bound and relevance scoping; verifier injection-resistance (deterministic quote check load-bearing); no floats in `legion` settlement; no new claim kinds; `tools/sim/` imports nothing from `legion`.
-
-## 8. Definition of done
-`pytest -q` green with ≥ 14 new tests across §2–§5 (including the eight §4A.6 goldens and the cross-process audit); `python -m legion.cli demo` and `legion demo` both work; `legion eval --sweep` writes `regime.json` on the fake-LLM path in CI; `legion run-cluster` settles a task across 4 worker processes; `legion audit` passes on a fresh ledger in a separate process and fails on a tampered one; `docs/REGIME_FINDINGS.md` states the measured crossover (or its honest absence); `docs/DECISIONS.md` updated for every judgment call; README gains a "Phase 3" section (≤ 20 lines) covering the regime finding, multi-process run, and audit command.
-
-## 9. A note on honesty of results
-The single most valuable output of this phase is a truthful answer to "does coordinated multi-agent reasoning beat a single agent, and when?" The Phase 2 eval already demonstrated the discipline of reporting a loss. Preserve it: if the sweep shows the protocol never wins at achievable scales, that is the finding, and it belongs in `REGIME_FINDINGS.md` stated plainly. The mechanism's correctness (conservation, determinism, incentive-compatibility, auditability) is independent of whether it is yet *economical*, and Phase 3 is allowed to conclude "correct but not yet economical at scale X" — that is a real, publishable result, not a failure of the work.
+## Note on what this fixes and doesn't
+This corrects the *comparison*, not the *mechanism* — conservation, determinism, incentive-compatibility, and auditability are untouched and their tests must stay green. The expected outcome is that the protocol looks substantially better against an honest iterative baseline than it did against the false one-call oracle, and that on the XL fixture the one-call baseline becomes infeasible while the protocol still settles. If, against the corrected and *competent* iterative baseline, the protocol still loses at all tested scales, that remains the honest finding and belongs in `REGIME_FINDINGS.md` — do not weaken the iterative baseline to manufacture a win.

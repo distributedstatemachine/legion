@@ -1,6 +1,6 @@
 {
   "name": "spreading_information",
-  "question": "By what concrete mechanisms is information replicated and transmitted in the printing workshop and in the honeybee colony?",
+  "question": "How many identical copies could the presses produce compared with a scribe, and how does the waggle dance tell foragers the distance and direction of food?",
   "documents": ["printing.txt", "beekeeping.txt"],
   "gold_facts": [
     "The new presses could produce hundreds of identical copies in the time a scribe needed for one, and the price of a book fell sharply as a result.",

@@ -96,6 +96,28 @@ append-only cite overrides.
   from the immutable log in a separate process; tampered payouts fail with a
   named divergence. Remaining trust assumption: the semantic verifier verdict.
 
+## Phase 3.1 — honest baselines + OpenRouter
+
+The Phase 3 baseline was false (it was handed the answer key in one call);
+`docs/REGIME_FINDINGS.md` is rewritten against two honest runners — a one-call
+infinite-context oracle (marked infeasible past the context window) and a fair
+iterative agent — with `token_ratio` as the headline. Corrected result: on the
+~640 kB XL fixture the one-call baseline is infeasible while the protocol
+solves at **1.02×** the iterative baseline's tokens.
+
+Real-endpoint runs (OpenRouter by default):
+
+```bash
+export VSCP_LLM=1 OPENROUTER_API_KEY=sk-or-...   # or VSCP_LLM_API_KEY / OPENAI_API_KEY
+export VSCP_LLM_MODEL=openai/gpt-4o-mini          # VSCP_VERIFIER_MODEL overrides for the verifier
+legion eval --dry-run                             # plan + cost estimate, no calls
+legion eval --tasks corpus/tasks --workers 4      # real run; provider usage drives costing
+```
+
+Optional: `VSCP_LLM_URL`, `VSCP_LLM_REFERER`/`VSCP_LLM_TITLE` (OpenRouter
+headers), `VSCP_CONTEXT_WINDOW_TOKENS` (128000), `VSCP_COST_PER_1K_TOKENS`
+(0.15), `VSCP_MAX_TOTAL_LLM_CALLS` (500, hard cap, partial report on exceed).
+
 ## Known limitations / TODO
 
 - **Steering collusion** (fixed in Phase 2): settlement v2's reader-normalized,

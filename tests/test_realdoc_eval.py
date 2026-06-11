@@ -34,20 +34,22 @@ def test_eval_fake_llm_end_to_end(tmp_path):
     assert out.exists()
     on_disk = json.loads(out.read_text(encoding="utf-8"))
     assert on_disk["llm_backend"] == "fake"
-    assert len(report["tasks"]) == 4  # three short fixtures + long_deep_archive
-    assert {entry["name"] for entry in report["tasks"]} >= {"deep_archive"} or any(
-        entry["name"].startswith("deep") or entry["name"].startswith("long")
-        for entry in report["tasks"]
-    )
-    assert report["cost_ratio"] is not None and report["cost_ratio"] > 0
+    assert len(report["tasks"]) == 5  # 3 short + long_deep_archive + xl_town_archive
+    assert report["token_ratio"] is not None and report["token_ratio"] > 0
+    assert report["token_source"] == "estimated"
+    assert report["budget_capped"] is False
     for entry in report["tasks"]:
         protocol = entry["protocol"]
         assert protocol["settled"] is True
         assert protocol["solved"] is True
         assert protocol["llm_calls"] <= 4 * 30  # within the per-worker budget
         assert "distinct_eligible_steering_readers" in protocol
-        assert entry["baseline"]["solved"] is True
-        assert entry["baseline"]["llm_calls"] == 1
+        assert entry["baseline_iterative"]["solved"] is True
+        assert entry["baseline_iterative"]["llm_calls"] > 1
+        if entry["baseline_onecall"]["feasible"]:
+            assert entry["baseline_onecall"]["llm_calls"] == 1
+        else:
+            assert entry["name"].startswith("xl_")
         # Somebody earned protocol payouts.
         assert any(delta > 0 for delta in protocol["payoffs"].values())
 

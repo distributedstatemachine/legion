@@ -3,8 +3,6 @@ from __future__ import annotations
 import json
 import os
 import secrets
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -83,42 +81,19 @@ class LLMVerifier:
     QUOTE_MAX = 300
 
     def __init__(self, complete=None) -> None:
-        self.complete = complete or self._openai_compatible_complete
+        self.complete = complete or self._client_complete
 
-    def _openai_compatible_complete(self, prompt: str) -> str:
-        url = os.environ.get("VSCP_LLM_URL")
-        api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("VSCP_LLM_API_KEY")
-        if not url or not api_key:
-            raise RuntimeError("VSCP_LLM_URL and API key are required for the LLM verifier")
-        payload = crypto.canonical_bytes(
-            {
-                "model": os.environ.get("VSCP_LLM_MODEL", "gpt-4.1-mini"),
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0,
-            }
-        )
-        req = urllib.request.Request(
-            url,
-            data=payload,
-            headers={
-                "content-type": "application/json",
-                "authorization": f"Bearer {api_key}",
-            },
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=30) as response:
-                data = response.read().decode("utf-8")
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"LLM verifier request failed: {exc}") from exc
-        try:
-            parsed = json.loads(data)
-            return parsed["choices"][0]["message"]["content"]
-        except (json.JSONDecodeError, KeyError, IndexError, TypeError):
-            return data
+    @staticmethod
+    def _client_complete(prompt: str) -> str:
+        from legion.llm_client import complete_text
+
+        text, _usage = complete_text(prompt, role="verifier")
+        return text
 
     def _complete_with_retry(self, prompt: str) -> str | None:
-        # At most 1 retry on transport error; never on a NO / parse failure.
+        # The client already retries transport errors once; any surviving
+        # exception (or contract failure) refuses the claim. Injected fakes
+        # without internal retry get the same one-retry policy here.
         for attempt in range(2):
             try:
                 return self.complete(prompt)

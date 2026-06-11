@@ -1,6 +1,6 @@
 {
   "name": "deep_archive",
-  "question": "According to the town archives, what major infrastructure changes did the town make, and what prompted each of them?",
+  "question": "What prompted the town to rebuild the quay on oak pilings, order shielded lanterns for the telescope, convert the waterwheel mill to turbine drive, relay the leaking aqueduct in clay pipe, raise the bridge span in dressed stone, and add a fireproof brick storehouse?",
   "documents": [
     "long/aqueduct_survey.txt",
     "long/bridge_accounts.txt",

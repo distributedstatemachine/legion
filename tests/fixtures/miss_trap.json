@@ -1,0 +1,8 @@
+{
+  "name": "miss_trap",
+  "question": "How do conservation groups fund the reserve and protect the most important roosting sites along the flyway?",
+  "documents": ["cranes.txt"],
+  "gold_facts": [
+    "At dusk the birds gather in shallow water where predators cannot approach unseen, and their calls carry for several kilometres across the flat country."
+  ]
+}
