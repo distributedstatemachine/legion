@@ -75,6 +75,27 @@ append-only cite overrides.
   metric (uses the real endpoint when `VSCP_LLM=1`, a deterministic gold-fact
   stub otherwise).
 
+## Phase 3
+
+- **Regime study**: `legion eval --sweep` runs the document-length × worker-count
+  grid and writes `regime.json`. The finding (`docs/REGIME_FINDINGS.md`): no cost
+  crossover at tested scales — per-call cost_ratio 7–29×, but context volume
+  (char_ratio) collapses from 3.0× on ~1 kB docs to **1.10×** on the ~130 kB
+  six-document task. Correct but not yet economical; the crossover regimes are
+  >context-window corpora and cross-task claim reuse.
+- **Research sim** (`tools/sim/model.py`): seven-strategy agent model
+  (HONEST/HOARDER/SPAMMER/RING_SYBIL/RING_BENEF/POISONER/HYBRID) with flat +
+  sampled-Shapley settlement and eight statistical goldens — including: a lone
+  poisoner is profitable under naive Shapley coverage but not under flat
+  backward flow, and an all-hybrid population earns ≤ 0.75× all-honest welfare.
+- **Multi-process**: `legion run-cluster --workers 4 --workdir <dir>` runs N
+  worker processes + 1 coordinator against one WAL ledger; lease acquisition is
+  atomic (`BEGIN IMMEDIATE`), contention has exactly one winner.
+- **Light client**: `legion audit <workdir>` re-derives every balance (via MINT
+  genesis transfers), every settlement, and every deterministic admission check
+  from the immutable log in a separate process; tampered payouts fail with a
+  named divergence. Remaining trust assumption: the semantic verifier verdict.
+
 ## Known limitations / TODO
 
 - **Steering collusion** (fixed in Phase 2): settlement v2's reader-normalized,

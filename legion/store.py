@@ -19,6 +19,7 @@ TRANSFER_REASONS = {
     "BOND",
     "SLASH",
     "BURN",
+    "MINT",  # genesis grants; makes balances re-derivable from transfers alone
 }
 
 
@@ -29,10 +30,13 @@ class Store:
         self.evidence_dir = self.root / "evidence"
         self.evidence_dir.mkdir(exist_ok=True)
         self.db_path = self.root / db_name
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = sqlite3.connect(self.db_path, timeout=10.0)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.execute("PRAGMA journal_mode = WAL")
+        # Multi-process discipline: writers wait up to 5s on a locked DB
+        # before surfacing SQLITE_BUSY; bounded retries handle the rest.
+        self.conn.execute("PRAGMA busy_timeout = 5000")
         self.init_schema()
 
     def close(self) -> None:
@@ -205,11 +209,19 @@ class Store:
         return next_epoch
 
     def create_identity(self, pubkey: str, balance: int = 0) -> None:
-        self.conn.execute(
-            'INSERT OR IGNORE INTO identities(pubkey, "balance_µ") VALUES(?, ?)',
-            (pubkey, balance),
-        )
-        self.conn.commit()
+        with self.conn:
+            cursor = self.conn.execute(
+                'INSERT OR IGNORE INTO identities(pubkey, "balance_µ") VALUES(?, ?)',
+                (pubkey, balance),
+            )
+            if cursor.rowcount == 1 and balance > 0:
+                # Mirror the genesis grant in the transfer log so a light
+                # client can re-derive every balance from transfers alone.
+                self.conn.execute(
+                    'INSERT INTO transfers(epoch, from_pubkey, to_pubkey, "amount_µ", reason) '
+                    "VALUES(?, NULL, ?, ?, 'MINT')",
+                    (self.epoch(), pubkey, balance),
+                )
 
     def balance(self, pubkey: str) -> int:
         row = self.conn.execute(

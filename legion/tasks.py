@@ -168,6 +168,46 @@ def live_lease(store, task_id: str, worker_pubkey: str):
     return row
 
 
+LEASE_RETRY_LIMIT = 5
+
+
+def _try_acquire_lease(store, subtask_id: str, worker_pubkey: str) -> bool:
+    """Atomic lease acquisition: BEGIN IMMEDIATE takes the write lock up
+    front, and the UPDATE is guarded by `status = 'PENDING'` so exactly one
+    worker wins a contended subtask. Retries on SQLITE_BUSY are bounded."""
+    import sqlite3 as _sqlite3
+    import time as _time
+
+    store.conn.commit()  # close any implicit open transaction first
+    for attempt in range(LEASE_RETRY_LIMIT):
+        try:
+            store.conn.execute("BEGIN IMMEDIATE")
+        except _sqlite3.OperationalError:
+            _time.sleep(0.01 * (attempt + 1))
+            continue
+        try:
+            cursor = store.conn.execute(
+                "UPDATE subtasks SET status = 'LEASED', lease_holder = ?, lease_expiry_epoch = ? "
+                "WHERE subtask_id = ? AND status = 'PENDING'",
+                (worker_pubkey, store.epoch() + 10, subtask_id),
+            )
+            if cursor.rowcount != 1:
+                store.conn.rollback()
+                return False  # another worker won the race; back off cleanly
+            store._apply_transfer(
+                store.epoch(), worker_pubkey, f"BOND:{subtask_id}", LEASE_BOND, "BOND"
+            )
+            store.conn.commit()
+            return True
+        except _sqlite3.OperationalError:
+            store.conn.rollback()
+            _time.sleep(0.01 * (attempt + 1))
+        except Exception:
+            store.conn.rollback()
+            raise
+    return False
+
+
 def lease_available_subtask(store, task_id: str, worker_pubkey: str):
     expire_leases(store)
     existing = live_lease(store, task_id, worker_pubkey)
@@ -180,16 +220,8 @@ def lease_available_subtask(store, task_id: str, worker_pubkey: str):
     for row in rows:
         if not _deps_done(store, row["deps_json"]):
             continue
-        with store.conn:
-            store._apply_transfer(
-                store.epoch(), worker_pubkey, f"BOND:{row['subtask_id']}", LEASE_BOND, "BOND"
-            )
-            store.conn.execute(
-                "UPDATE subtasks SET status = 'LEASED', lease_holder = ?, lease_expiry_epoch = ? "
-                "WHERE subtask_id = ?",
-                (worker_pubkey, store.epoch() + 10, row["subtask_id"]),
-            )
-        return store.subtask(row["subtask_id"])
+        if _try_acquire_lease(store, row["subtask_id"], worker_pubkey):
+            return store.subtask(row["subtask_id"])
     return None
 
 

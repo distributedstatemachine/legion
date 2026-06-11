@@ -1,0 +1,112 @@
+Aqueduct Survey
+
+Entry 1, year 1701, season of harvest: the almoner of the north gate reported the apprenticeship of two boys to the cooper, and the toll-keeper entered a sum of 250 shillings in the assize register.
+Entry 2, year 1701, season of high summer: the almoner of the beacon hill reported an outbreak of murrain among the common herd, soon contained, and the clerk entered a sum of 260 shillings in the toll book.
+Entry 3, year 1701, season of high summer: the clerk of the salt store reported an outbreak of murrain among the common herd, soon contained, and the surveyor entered a sum of 467 shillings in the toll book.
+Entry 4, year 1701, season of high summer: the warden of the salt store reported a fine levied for unswept chimneys in the lower lanes, and the almoner entered a sum of 288 shillings in the common ledger.
+Entry 5, year 1701, season of high summer: the almoner of the beacon hill reported an outbreak of murrain among the common herd, soon contained, and the master carpenter entered a sum of 469 shillings in the toll book.
+Entry 6, year 1701, season of frosts: the almoner of the grain exchange reported the reglazing of the council chamber windows, and the surveyor entered a sum of 33 shillings in the common ledger.
+Entry 7, year 1701, season of thaw: the master carpenter of the long wharf reported a dispute over weights and measures settled by the assize, and the toll-keeper entered a sum of 254 shillings in the harbour roll.
+Entry 8, year 1701, season of planting: the master carpenter of the beacon hill reported the arrival of a coastal trader carrying tar and cordage, and the clerk entered a sum of 471 shillings in the toll book.
+Entry 9, year 1702, season of planting: the clerk of the ferry stairs reported a census of carts passing the toll bar in a single week, and the warden entered a sum of 43 shillings in the harbour roll.
+Entry 10, year 1702, season of frosts: the almoner of the salt store reported the apprenticeship of two boys to the cooper, and the toll-keeper entered a sum of 151 shillings in the common ledger.
+Entry 11, year 1702, season of frosts: the surveyor of the ferry stairs reported an inventory of stores taken before the winter closure, and the toll-keeper entered a sum of 282 shillings in the harbour roll.
+Entry 12, year 1702, season of harvest: the warden of the chandlery reported the purchase of lamp oil at the autumn fair, and the surveyor entered a sum of 296 shillings in the toll book.
+Entry 13, year 1702, season of high summer: the clerk of the fish shambles reported repairs to the culvert after the spring flood, and the warden entered a sum of 315 shillings in the harbour roll.
+Entry 14, year 1702, season of harvest: the warden of the salt store reported repairs to the culvert after the spring flood, and the clerk entered a sum of 474 shillings in the common ledger.
+Entry 15, year 1702, season of thaw: the master carpenter of the ferry stairs reported the purchase of lamp oil at the autumn fair, and the master carpenter entered a sum of 270 shillings in the harbour roll.
+Entry 16, year 1702, season of frosts: the clerk of the fish shambles reported an outbreak of murrain among the common herd, soon contained, and the almoner entered a sum of 298 shillings in the harbour roll.
+Entry 17, year 1702, season of harvest: the almoner of the beacon hill reported the arrival of a coastal trader carrying tar and cordage, and the surveyor entered a sum of 315 shillings in the common ledger.
+Entry 18, year 1703, season of harvest: the toll-keeper of the beacon hill reported an inventory of stores taken before the winter closure, and the clerk entered a sum of 10 shillings in the harbour roll.
+Entry 19, year 1703, season of thaw: the master carpenter of the fish shambles reported a fine levied for unswept chimneys in the lower lanes, and the clerk entered a sum of 172 shillings in the assize register.
+Entry 20, year 1703, season of thaw: the warden of the rope walk reported an inventory of stores taken before the winter closure, and the warden entered a sum of 420 shillings in the common ledger.
+Entry 21, year 1703, season of thaw: the warden of the fish shambles reported an outbreak of murrain among the common herd, soon contained, and the toll-keeper entered a sum of 63 shillings in the assize register.
+Entry 22, year 1703, season of thaw: the surveyor of the salt store reported a dispute over weights and measures settled by the assize, and the toll-keeper entered a sum of 13 shillings in the toll book.
+Entry 23, year 1703, season of planting: the master carpenter of the salt store reported a census of carts passing the toll bar in a single week, and the clerk entered a sum of 374 shillings in the common ledger.
+Entry 24, year 1703, season of deep winter: the warden of the ferry stairs reported the purchase of lamp oil at the autumn fair, and the toll-keeper entered a sum of 53 shillings in the harbour roll.
+Entry 25, year 1703, season of thaw: the clerk of the salt store reported the apprenticeship of two boys to the cooper, and the surveyor entered a sum of 225 shillings in the toll book.
+Entry 26, year 1703, season of thaw: the toll-keeper of the grain exchange reported a dispute over weights and measures settled by the assize, and the toll-keeper entered a sum of 53 shillings in the assize register.
+Entry 27, year 1704, season of planting: the surveyor of the beacon hill reported a census of carts passing the toll bar in a single week, and the toll-keeper entered a sum of 88 shillings in the toll book.
+Entry 28, year 1704, season of thaw: the master carpenter of the rope walk reported repairs to the culvert after the spring flood, and the surveyor entered a sum of 273 shillings in the harbour roll.
+Entry 29, year 1704, season of thaw: the toll-keeper of the grain exchange reported repairs to the culvert after the spring flood, and the warden entered a sum of 243 shillings in the assize register.
+Entry 30, year 1704, season of frosts: the toll-keeper of the tide mill reported a fine levied for unswept chimneys in the lower lanes, and the almoner entered a sum of 430 shillings in the harbour roll.
+Entry 31, year 1704, season of planting: the toll-keeper of the north gate reported a census of carts passing the toll bar in a single week, and the master carpenter entered a sum of 42 shillings in the harbour roll.
+Entry 32, year 1704, season of deep winter: the warden of the ferry stairs reported the apprenticeship of two boys to the cooper, and the clerk entered a sum of 124 shillings in the assize register.
+Entry 33, year 1704, season of high summer: the toll-keeper of the tide mill reported a fine levied for unswept chimneys in the lower lanes, and the toll-keeper entered a sum of 458 shillings in the toll book.
+Entry 34, year 1704, season of deep winter: the surveyor of the long wharf reported the purchase of lamp oil at the autumn fair, and the master carpenter entered a sum of 43 shillings in the common ledger.
+Entry 35, year 1704, season of frosts: the clerk of the beacon hill reported repairs to the culvert after the spring flood, and the clerk entered a sum of 116 shillings in the assize register.
+Entry 36, year 1705, season of harvest: the master carpenter of the chandlery reported the purchase of lamp oil at the autumn fair, and the warden entered a sum of 207 shillings in the assize register.
+Entry 37, year 1705, season of deep winter: the master carpenter of the north gate reported repairs to the culvert after the spring flood, and the almoner entered a sum of 34 shillings in the harbour roll.
+Entry 38, year 1705, season of deep winter: the clerk of the grain exchange reported the reglazing of the council chamber windows, and the almoner entered a sum of 466 shillings in the common ledger.
+Entry 39, year 1705, season of thaw: the almoner of the beacon hill reported the apprenticeship of two boys to the cooper, and the almoner entered a sum of 27 shillings in the assize register.
+Entry 40, year 1705, season of planting: the toll-keeper of the salt store reported repairs to the culvert after the spring flood, and the warden entered a sum of 207 shillings in the assize register.
+Entry 41, year 1705, season of high summer: the warden of the fish shambles reported a dispute over weights and measures settled by the assize, and the master carpenter entered a sum of 388 shillings in the common ledger.
+Entry 42, year 1705, season of deep winter: the toll-keeper of the chandlery reported the arrival of a coastal trader carrying tar and cordage, and the clerk entered a sum of 62 shillings in the toll book.
+Entry 43, year 1705, season of high summer: the surveyor of the rope walk reported the arrival of a coastal trader carrying tar and cordage, and the almoner entered a sum of 439 shillings in the assize register.
+Entry 44, year 1705, season of deep winter: the warden of the north gate reported the apprenticeship of two boys to the cooper, and the almoner entered a sum of 411 shillings in the common ledger.
+Entry 45, year 1706, season of high summer: the clerk of the ferry stairs reported a fine levied for unswept chimneys in the lower lanes, and the warden entered a sum of 448 shillings in the toll book.
+Entry 46, year 1706, season of high summer: the warden of the north gate reported a dispute over weights and measures settled by the assize, and the clerk entered a sum of 350 shillings in the harbour roll.
+Entry 47, year 1706, season of frosts: the surveyor of the beacon hill reported an outbreak of murrain among the common herd, soon contained, and the warden entered a sum of 435 shillings in the assize register.
+Entry 48, year 1706, season of deep winter: the master carpenter of the grain exchange reported the purchase of lamp oil at the autumn fair, and the surveyor entered a sum of 448 shillings in the toll book.
+Entry 49, year 1706, season of planting: the almoner of the chandlery reported the apprenticeship of two boys to the cooper, and the warden entered a sum of 72 shillings in the toll book.
+Entry 50, year 1706, season of high summer: the surveyor of the beacon hill reported a fine levied for unswept chimneys in the lower lanes, and the master carpenter entered a sum of 49 shillings in the harbour roll.
+Entry 51, year 1706, season of frosts: the warden of the north gate reported the apprenticeship of two boys to the cooper, and the clerk entered a sum of 78 shillings in the harbour roll.
+Entry 52, year 1706, season of high summer: the almoner of the ferry stairs reported repairs to the culvert after the spring flood, and the surveyor entered a sum of 60 shillings in the assize register.
+Entry 53, year 1706, season of deep winter: the clerk of the north gate reported the apprenticeship of two boys to the cooper, and the clerk entered a sum of 440 shillings in the common ledger.
+Entry 54, year 1707, season of high summer: the almoner of the beacon hill reported the apprenticeship of two boys to the cooper, and the almoner entered a sum of 57 shillings in the common ledger.
+The surveyor's report concluded that the wooden aqueduct leaked a third of its flow, and the council voted to relay the whole course in fired clay pipe before the next dry summer.
+Entry 55, year 1707, season of frosts: the almoner of the grain exchange reported a fine levied for unswept chimneys in the lower lanes, and the surveyor entered a sum of 65 shillings in the assize register.
+Entry 56, year 1707, season of thaw: the master carpenter of the grain exchange reported the purchase of lamp oil at the autumn fair, and the warden entered a sum of 156 shillings in the harbour roll.
+Entry 57, year 1707, season of deep winter: the master carpenter of the rope walk reported repairs to the culvert after the spring flood, and the master carpenter entered a sum of 291 shillings in the assize register.
+Entry 58, year 1707, season of deep winter: the warden of the salt store reported the arrival of a coastal trader carrying tar and cordage, and the clerk entered a sum of 385 shillings in the toll book.
+Entry 59, year 1707, season of thaw: the almoner of the north gate reported the arrival of a coastal trader carrying tar and cordage, and the almoner entered a sum of 286 shillings in the harbour roll.
+Entry 60, year 1707, season of harvest: the almoner of the chandlery reported an inventory of stores taken before the winter closure, and the almoner entered a sum of 44 shillings in the harbour roll.
+Entry 61, year 1707, season of planting: the surveyor of the chandlery reported repairs to the culvert after the spring flood, and the almoner entered a sum of 100 shillings in the harbour roll.
+Entry 62, year 1707, season of thaw: the warden of the north gate reported the reglazing of the council chamber windows, and the almoner entered a sum of 387 shillings in the toll book.
+Entry 63, year 1708, season of thaw: the almoner of the long wharf reported the apprenticeship of two boys to the cooper, and the clerk entered a sum of 330 shillings in the common ledger.
+Entry 64, year 1708, season of planting: the toll-keeper of the rope walk reported the arrival of a coastal trader carrying tar and cordage, and the clerk entered a sum of 236 shillings in the assize register.
+Entry 65, year 1708, season of high summer: the toll-keeper of the rope walk reported the arrival of a coastal trader carrying tar and cordage, and the toll-keeper entered a sum of 251 shillings in the toll book.
+Entry 66, year 1708, season of frosts: the almoner of the long wharf reported the reglazing of the council chamber windows, and the almoner entered a sum of 349 shillings in the harbour roll.
+Entry 67, year 1708, season of harvest: the almoner of the fish shambles reported the reglazing of the council chamber windows, and the toll-keeper entered a sum of 478 shillings in the toll book.
+Entry 68, year 1708, season of thaw: the surveyor of the beacon hill reported a fine levied for unswept chimneys in the lower lanes, and the warden entered a sum of 270 shillings in the toll book.
+Entry 69, year 1708, season of high summer: the toll-keeper of the rope walk reported the purchase of lamp oil at the autumn fair, and the toll-keeper entered a sum of 152 shillings in the assize register.
+Entry 70, year 1708, season of thaw: the warden of the ferry stairs reported a dispute over weights and measures settled by the assize, and the warden entered a sum of 117 shillings in the toll book.
+Entry 71, year 1708, season of thaw: the surveyor of the north gate reported a census of carts passing the toll bar in a single week, and the surveyor entered a sum of 443 shillings in the toll book.
+Entry 72, year 1709, season of planting: the master carpenter of the grain exchange reported a fine levied for unswept chimneys in the lower lanes, and the toll-keeper entered a sum of 197 shillings in the common ledger.
+Entry 73, year 1709, season of frosts: the warden of the ferry stairs reported an outbreak of murrain among the common herd, soon contained, and the warden entered a sum of 384 shillings in the assize register.
+Entry 74, year 1709, season of planting: the surveyor of the ferry stairs reported an outbreak of murrain among the common herd, soon contained, and the almoner entered a sum of 424 shillings in the assize register.
+Entry 75, year 1709, season of harvest: the toll-keeper of the chandlery reported an inventory of stores taken before the winter closure, and the warden entered a sum of 338 shillings in the common ledger.
+Entry 76, year 1709, season of deep winter: the clerk of the tide mill reported the reglazing of the council chamber windows, and the toll-keeper entered a sum of 132 shillings in the harbour roll.
+Entry 77, year 1709, season of thaw: the almoner of the tide mill reported the apprenticeship of two boys to the cooper, and the almoner entered a sum of 198 shillings in the assize register.
+Entry 78, year 1709, season of thaw: the clerk of the rope walk reported an inventory of stores taken before the winter closure, and the surveyor entered a sum of 375 shillings in the harbour roll.
+Entry 79, year 1709, season of thaw: the warden of the grain exchange reported the purchase of lamp oil at the autumn fair, and the clerk entered a sum of 253 shillings in the common ledger.
+Entry 80, year 1709, season of deep winter: the master carpenter of the rope walk reported a fine levied for unswept chimneys in the lower lanes, and the almoner entered a sum of 20 shillings in the assize register.
+Entry 81, year 1710, season of harvest: the almoner of the north gate reported the arrival of a coastal trader carrying tar and cordage, and the almoner entered a sum of 400 shillings in the toll book.
+Entry 82, year 1710, season of thaw: the warden of the chandlery reported an outbreak of murrain among the common herd, soon contained, and the clerk entered a sum of 324 shillings in the harbour roll.
+Entry 83, year 1710, season of thaw: the master carpenter of the ferry stairs reported a fine levied for unswept chimneys in the lower lanes, and the clerk entered a sum of 198 shillings in the assize register.
+Entry 84, year 1710, season of thaw: the warden of the chandlery reported a census of carts passing the toll bar in a single week, and the toll-keeper entered a sum of 325 shillings in the harbour roll.
+Entry 85, year 1710, season of deep winter: the warden of the chandlery reported the apprenticeship of two boys to the cooper, and the clerk entered a sum of 468 shillings in the assize register.
+Entry 86, year 1710, season of high summer: the master carpenter of the salt store reported the reglazing of the council chamber windows, and the clerk entered a sum of 21 shillings in the assize register.
+Entry 87, year 1710, season of harvest: the surveyor of the fish shambles reported a census of carts passing the toll bar in a single week, and the surveyor entered a sum of 406 shillings in the common ledger.
+Entry 88, year 1710, season of thaw: the warden of the grain exchange reported the apprenticeship of two boys to the cooper, and the warden entered a sum of 268 shillings in the toll book.
+Entry 89, year 1710, season of planting: the warden of the ferry stairs reported the reglazing of the council chamber windows, and the almoner entered a sum of 261 shillings in the harbour roll.
+Entry 90, year 1711, season of thaw: the clerk of the long wharf reported an outbreak of murrain among the common herd, soon contained, and the almoner entered a sum of 474 shillings in the common ledger.
+Entry 91, year 1711, season of thaw: the almoner of the salt store reported the arrival of a coastal trader carrying tar and cordage, and the almoner entered a sum of 398 shillings in the toll book.
+Entry 92, year 1711, season of deep winter: the warden of the grain exchange reported the purchase of lamp oil at the autumn fair, and the master carpenter entered a sum of 215 shillings in the common ledger.
+Entry 93, year 1711, season of harvest: the surveyor of the tide mill reported the arrival of a coastal trader carrying tar and cordage, and the surveyor entered a sum of 38 shillings in the common ledger.
+Entry 94, year 1711, season of high summer: the master carpenter of the north gate reported a fine levied for unswept chimneys in the lower lanes, and the surveyor entered a sum of 93 shillings in the common ledger.
+Entry 95, year 1711, season of planting: the surveyor of the salt store reported an outbreak of murrain among the common herd, soon contained, and the clerk entered a sum of 108 shillings in the common ledger.
+Entry 96, year 1711, season of planting: the master carpenter of the salt store reported a dispute over weights and measures settled by the assize, and the surveyor entered a sum of 190 shillings in the common ledger.
+Entry 97, year 1711, season of frosts: the clerk of the rope walk reported repairs to the culvert after the spring flood, and the almoner entered a sum of 59 shillings in the assize register.
+Entry 98, year 1711, season of high summer: the master carpenter of the tide mill reported repairs to the culvert after the spring flood, and the warden entered a sum of 108 shillings in the harbour roll.
+Entry 99, year 1712, season of high summer: the almoner of the tide mill reported the apprenticeship of two boys to the cooper, and the toll-keeper entered a sum of 327 shillings in the harbour roll.
+Entry 100, year 1712, season of planting: the toll-keeper of the salt store reported the arrival of a coastal trader carrying tar and cordage, and the toll-keeper entered a sum of 299 shillings in the harbour roll.
+Entry 101, year 1712, season of planting: the almoner of the rope walk reported repairs to the culvert after the spring flood, and the clerk entered a sum of 163 shillings in the toll book.
+Entry 102, year 1712, season of planting: the clerk of the tide mill reported a fine levied for unswept chimneys in the lower lanes, and the almoner entered a sum of 341 shillings in the common ledger.
+Entry 103, year 1712, season of planting: the toll-keeper of the north gate reported the purchase of lamp oil at the autumn fair, and the warden entered a sum of 361 shillings in the common ledger.
+Entry 104, year 1712, season of planting: the almoner of the tide mill reported the reglazing of the council chamber windows, and the almoner entered a sum of 381 shillings in the toll book.
+Entry 105, year 1712, season of frosts: the almoner of the tide mill reported a fine levied for unswept chimneys in the lower lanes, and the warden entered a sum of 129 shillings in the assize register.
+Entry 106, year 1712, season of deep winter: the surveyor of the ferry stairs reported a dispute over weights and measures settled by the assize, and the almoner entered a sum of 211 shillings in the common ledger.
+Entry 107, year 1712, season of harvest: the master carpenter of the beacon hill reported a census of carts passing the toll bar in a single week, and the clerk entered a sum of 192 shillings in the harbour roll.
+Entry 108, year 1713, season of harvest: the warden of the rope walk reported the arrival of a coastal trader carrying tar and cordage, and the surveyor entered a sum of 59 shillings in the toll book.
+Entry 109, year 1713, season of deep winter: the almoner of the long wharf reported repairs to the culvert after the spring flood, and the almoner entered a sum of 223 shillings in the toll book.

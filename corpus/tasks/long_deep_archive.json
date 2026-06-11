@@ -2,11 +2,17 @@
   "name": "deep_archive",
   "question": "According to the town archives, what major infrastructure changes did the town make, and what prompted each of them?",
   "documents": [
+    "long/aqueduct_survey.txt",
+    "long/bridge_accounts.txt",
+    "long/granary_minutes.txt",
     "long/harbor_chronicle.txt",
     "long/mill_registry.txt",
     "long/observatory_log.txt"
   ],
   "gold_facts": [
+    "The surveyor's report concluded that the wooden aqueduct leaked a third of its flow, and the council voted to relay the whole course in fired clay pipe before the next dry summer.",
+    "The bridge accounts show that the central span was raised by four feet and rebuilt in dressed stone after two winters in which ice floes carried away the old wooden arches.",
+    "The granary minutes record that a second fireproof storehouse was raised in brick on the east bank after the great fire consumed half the common grain reserve.",
     "The harbormaster's ledger records that the deep-water quay was rebuilt on oak pilings after the great storm season destroyed the original timber framework.",
     "The grain mill converted from waterwheel to turbine drive in a single winter, doubling its throughput while halving the toll charged to upland farmers.",
     "The observatory's principal telescope lost three nights of observation each month to lamplight from the new quarter until the council ordered shielded street lanterns."

@@ -25,3 +25,4 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+markers = ["slow: long-running multi-process tests"]

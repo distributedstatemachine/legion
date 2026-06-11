@@ -35,6 +35,8 @@ class LLMWorker(Worker):
     attempts: dict[str, int] = field(default_factory=dict)
     fetched_docs: dict[str, str] = field(default_factory=dict)
     fetched_facts: dict[str, str] = field(default_factory=dict)
+    seen_fail_ids: set[str] = field(default_factory=set)
+    triaged: bool = False
     answered: bool = False
 
     @classmethod
@@ -58,16 +60,57 @@ class LLMWorker(Worker):
             return
         if self.calls >= self.max_calls:
             return
+        self._absorb_fails(store, task_id)
         lease = tasks.live_lease(store, task_id, self.pubkey) or tasks.lease_available_subtask(
             store, task_id, self.pubkey
         )
         if lease is None:
+            self._triage_idle(store, task_id)
             return
         kind = tasks.subtask_kind(lease["subtask_id"])
         if kind == "fact":
             self._work_fact(store, task_id, lease["subtask_id"])
         elif kind == "answer":
             self._work_answer(store, task_id, lease["subtask_id"])
+
+    def _absorb_fails(self, store, task_id: str) -> None:
+        """Read published FAILs through the metered fetch (steering readership)."""
+        for claim in store.admitted_claims(task_id):
+            if claim["kind"] != "FAIL" or claim["claim_id"] in self.seen_fail_ids:
+                continue
+            self.seen_fail_ids.add(claim["claim_id"])
+            if claim["author"] != self.pubkey:
+                store.fetch(self.pubkey, claim["claim_id"])
+
+    def _triage_idle(self, store, task_id: str) -> None:
+        """Idle workers triage a document others are mining: publish one
+        verified irrelevance FAIL ('looks relevant, is not') so leaseholders
+        can skip the trap sentence. One triage per worker per task."""
+        if self.triaged or self.answered:
+            return
+        spec = store.task_spec(task_id)
+        doc = spec["docs"][int(self.pubkey[:8], 16) % len(spec["docs"])]
+        doc_hash = doc["doc_hash"]
+        if doc_hash not in self.fetched_docs:
+            self.fetched_docs[doc_hash] = store.fetch(self.pubkey, doc_hash)
+        text = self.fetched_docs[doc_hash]
+        prompt = (
+            "TASK: TRIAGE\n"
+            "From the DOCUMENT below, quote one sentence that superficially "
+            "appears relevant to the QUESTION but is actually irrelevant. Copy "
+            "it verbatim, character for character.\n"
+            'Return strict JSON only: {"sentence": "..."}\n'
+            f"QUESTION: {self.question}\n"
+            f"DOCUMENT:\n{text}"
+        )
+        raw = self._call(prompt)
+        self.triaged = True
+        if raw is None:
+            return
+        parsed = LLMVerifier._parse_first_json(raw)
+        sentence = parsed.get("sentence") if isinstance(parsed, dict) else None
+        if isinstance(sentence, str):
+            self.submit_irrelevance_fail(store, task_id, doc_hash, sentence)
 
     def _work_fact(self, store, task_id: str, subtask_id: str) -> None:
         if self.attempts.get(subtask_id, 0) >= MAX_EXTRACTION_ATTEMPTS:
@@ -76,7 +119,11 @@ class LLMWorker(Worker):
         doc = spec["docs"][tasks.subtask_index(subtask_id)]
         doc_hash = doc["doc_hash"]
         if doc_hash not in self.fetched_docs:
+            # Read epoch: fetch the document now, extract next epoch. The gap
+            # lets FAILs published by triage land before the FACT is authored,
+            # which is what makes their readership count for steering v2.
             self.fetched_docs[doc_hash] = store.fetch(self.pubkey, doc_hash)
+            return
         text = self.fetched_docs[doc_hash]
         prompt = (
             "TASK: EXTRACT\n"

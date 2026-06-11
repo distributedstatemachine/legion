@@ -155,25 +155,61 @@ def demo(workers: int, honest: int, hoarders: int, K: int, D: int, seed: int, wo
 @click.option("--corpus", "corpus_dir", type=click.Path(path_type=Path), default=None)
 @click.option("--workers", "n_workers", type=int, default=4)
 @click.option("--baseline/--no-baseline", default=True)
-@click.option("--out", "out_path", type=click.Path(path_type=Path), default=Path("report.json"))
+@click.option("--sweep", is_flag=True, default=False, help="Run the regime-study grid.")
+@click.option("--out", "out_path", type=click.Path(path_type=Path), default=None)
 def eval_command(
-    tasks_dir: Path, corpus_dir: Path | None, n_workers: int, baseline: bool, out_path: Path
+    tasks_dir: Path,
+    corpus_dir: Path | None,
+    n_workers: int,
+    baseline: bool,
+    sweep: bool,
+    out_path: Path | None,
 ) -> None:
     """Run the protocol with LLM workers vs a single-agent baseline.
 
     Uses the real endpoint when VSCP_LLM=1, otherwise a deterministic fake
-    LLM answering from the fixtures' gold facts."""
-    from legion.evaluate import format_report, run_eval
+    LLM answering from the fixtures' gold facts. With --sweep, runs the
+    document-length x worker-count regime grid and writes regime.json."""
+    from legion.evaluate import format_report, format_sweep, run_eval, run_sweep
 
+    if sweep:
+        out = out_path or Path("regime.json")
+        result = run_sweep(tasks_dir, corpus_dir=corpus_dir, out_path=out)
+        click.echo(format_sweep(result))
+        click.echo(f"regime grid written to {out}")
+        return
+    out = out_path or Path("report.json")
     report = run_eval(
         tasks_dir,
         corpus_dir=corpus_dir,
         n_workers=n_workers,
         baseline=baseline,
-        out_path=out_path,
+        out_path=out,
     )
     click.echo(format_report(report))
-    click.echo(f"report written to {out_path}")
+    click.echo(f"report written to {out}")
+
+
+@main.command(name="run-cluster")
+@click.option("--workers", "n_workers", type=int, default=4)
+@click.option("--K", "--k", "K", type=int, default=3)
+@click.option("--D", "--d", "D", type=int, default=2)
+@click.option("--seed", type=int, default=11)
+@click.option("--timeout", "timeout_s", type=float, default=60.0)
+@click.option("--workdir", type=click.Path(path_type=Path), required=True)
+def run_cluster_command(
+    n_workers: int, K: int, D: int, seed: int, timeout_s: float, workdir: Path
+) -> None:
+    """Run N worker processes + 1 coordinator against one WAL ledger."""
+    from legion.cluster import format_cluster_summary, run_cluster
+
+    workdir.mkdir(parents=True, exist_ok=True)
+    summary = run_cluster(
+        workdir, n_workers=n_workers, K=K, D=D, seed=seed, timeout_s=timeout_s
+    )
+    click.echo(format_cluster_summary(summary))
+    if not summary["settled"]:
+        raise SystemExit(1)
 
 
 @main.command()
@@ -186,6 +222,26 @@ def settle(db_root: Path, task_id: str) -> None:
     transfers = settlement.settle(store.snapshot(task_id))
     click.echo(json.dumps([transfer.to_dict() for transfer in transfers], indent=2, sort_keys=True))
     store.close()
+
+
+@main.command()
+@click.argument("path", type=click.Path(path_type=Path))
+def audit(path: Path) -> None:
+    """Light-client audit: re-derive every balance, settlement, and
+    deterministic admission check from the immutable log."""
+    import sys as _sys
+
+    repo_root = Path(__file__).resolve().parents[1]
+    if str(repo_root) not in _sys.path:
+        _sys.path.insert(0, str(repo_root))
+    from tools.lightclient import audit as run_audit
+
+    result = run_audit(path)
+    click.echo(result.summary())
+    if not result.passed:
+        for divergence in result.divergences[1:]:
+            click.echo(f"  also: {divergence}")
+        raise SystemExit(1)
 
 
 @main.command()

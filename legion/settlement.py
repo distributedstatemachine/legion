@@ -201,6 +201,27 @@ def eligible_steering_readers(snapshot: dict[str, Any]) -> set[str]:
     }
 
 
+def redundant_work_avoided(snapshot: dict[str, Any]) -> int:
+    """Admitted FAIL/CONSTRAINT claims fetched by at least one productive
+    reader - a proxy for the cross-worker reuse the cost argument leans on."""
+    _, kept = derivation_flows(snapshot)
+    claims = snapshot["claims"]
+    productive = {
+        claims[claim_id]["author"]
+        for claim_id, amount in kept.items()
+        if amount > 0 and claim_id in claims
+    }
+    productive.add(claims[snapshot["answer_claim_id"]]["author"])
+    readers: dict[str, set[str]] = {}
+    for fetch in snapshot.get("fetches", []):
+        readers.setdefault(fetch["object_id"], set()).add(fetch["reader"])
+    return sum(
+        1
+        for claim_id, claim in claims.items()
+        if claim["kind"] in {"FAIL", "CONSTRAINT"} and readers.get(claim_id, set()) & productive
+    )
+
+
 def _steering_weights_v2(
     snapshot: dict[str, Any], derivation_paid: dict[str, int]
 ) -> dict[str, int]:

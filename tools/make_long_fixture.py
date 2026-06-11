@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LONG_DIR = ROOT / "corpus" / "long"
-FIXTURE_PATH = ROOT / "corpus" / "tasks" / "deep_archive.json"
+FIXTURE_PATH = ROOT / "corpus" / "tasks" / "long_deep_archive.json"
 
 SEASONS = ["thaw", "planting", "high summer", "harvest", "frosts", "deep winter"]
 OFFICIALS = ["warden", "clerk", "surveyor", "almoner", "toll-keeper", "master carpenter"]
@@ -56,6 +56,21 @@ DOCS = {
         "winter, doubling its throughput while halving the toll charged to "
         "upland farmers."
     ),
+    "aqueduct_survey.txt": (
+        "The surveyor's report concluded that the wooden aqueduct leaked a "
+        "third of its flow, and the council voted to relay the whole course in "
+        "fired clay pipe before the next dry summer."
+    ),
+    "bridge_accounts.txt": (
+        "The bridge accounts show that the central span was raised by four feet "
+        "and rebuilt in dressed stone after two winters in which ice floes "
+        "carried away the old wooden arches."
+    ),
+    "granary_minutes.txt": (
+        "The granary minutes record that a second fireproof storehouse was "
+        "raised in brick on the east bank after the great fire consumed half "
+        "the common grain reserve."
+    ),
 }
 
 QUESTION = (
@@ -73,7 +88,7 @@ def _entry(rng: random.Random, year: int, index: int) -> str:
     )
 
 
-def _document(name: str, gold: str, seed: int, target_bytes: int = 12_000) -> str:
+def _document(name: str, gold: str, seed: int, target_bytes: int = 22_000) -> str:
     rng = random.Random(seed)
     entries: list[str] = []
     year, index = 1701 + seed % 40, 1
